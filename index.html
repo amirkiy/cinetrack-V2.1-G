@@ -6,7 +6,6 @@
   <title>CineTrack Pro</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <style>
-    /* UI Redesign: Modern Light Theme */
     :root {
       --bg-main: #f8fafc;
       --bg-surface: #ffffff;
@@ -26,11 +25,10 @@
       --radius-lg: 16px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Vazirmatn', sans-serif; transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Vazirmatn', sans-serif; }
 
     body { background-color: var(--bg-main); color: var(--text-main); overflow-x: hidden; padding-bottom: 60px; line-height: 1.6; }
 
-    /* Header */
     header {
       background: var(--bg-surface); border-bottom: 1px solid var(--border);
       padding: 15px 30px; display: flex; justify-content: space-between;
@@ -41,34 +39,28 @@
     .brand { font-size: 22px; font-weight: 900; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
     .brand-highlight { color: var(--accent); }
 
-    /* Search */
     .search-container { position: relative; width: 40%; max-width: 600px; min-width: 280px; }
     .search-wrapper { display: flex; align-items: center; background: var(--bg-main); border: 1px solid var(--border); border-radius: 30px; padding: 4px 15px; }
     .search-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
     .search-wrapper input { flex: 1; background: transparent; border: none; color: var(--text-main); padding: 10px; font-size: 14px; outline: none; }
-    .search-wrapper input::placeholder { color: var(--text-muted); }
     .search-wrapper button { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; }
 
     .search-dropdown { position: absolute; top: 110%; left: 0; right: 0; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); max-height: 400px; overflow-y: auto; z-index: 200; box-shadow: var(--shadow-lg); display: none; }
-    .search-item { display: flex; gap: 15px; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; align-items: center; }
+    .search-item { display: flex; gap: 15px; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; align-items: center; text-align: right; }
     .search-item:hover { background: var(--bg-main); }
     .search-item img { width: 50px; height: 75px; object-fit: cover; border-radius: 6px; background: #e2e8f0; }
     .search-item .info h4 { font-size: 15px; margin-bottom: 4px; font-weight: 700;}
     .search-item .info p { font-size: 13px; color: var(--text-muted); }
 
-    /* Buttons */
     .nav-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    .btn { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
-    .btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+    .btn:hover { background: var(--accent-hover); }
     .btn-secondary { background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); }
     .btn-secondary:hover { background: var(--bg-main); }
     .btn-danger { background: #fee2e2; color: var(--danger); border: 1px solid #f87171; }
     .btn-danger:hover { background: #fca5a5; color: white; }
-    .btn-success { background: #d1fae5; color: var(--green); border: 1px solid #34d399; }
-    .btn-success:hover { background: #10b981; color: white; }
 
-    /* Hero Section */
-    .hero-section { margin: 30px; background: var(--bg-surface); border-radius: var(--radius-lg); padding: 30px; border: 1px solid var(--border); position: relative; min-height: 350px; display: flex; align-items: center; box-shadow: var(--shadow-md); }
+    .hero-section { margin: 30px; background: var(--bg-surface); border-radius: var(--radius-lg); padding: 30px; border: 1px solid var(--border); position: relative; min-height: 350px; display: flex; align-items: center; box-shadow: var(--shadow-md); text-align: right; }
     .hero-empty { text-align: center; width: 100%; color: var(--text-muted); font-size: 16px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
     .hero-content { display: flex; gap: 40px; width: 100%; align-items: flex-start; }
     .hero-poster { width: 220px; height: 330px; object-fit: cover; border-radius: var(--radius-md); box-shadow: var(--shadow-md); border: 1px solid var(--border); }
@@ -81,18 +73,19 @@
     .badge-warning { background: #fef3c7; color: #d97706; border-color: #fde68a; }
 
     .hero-extended-info { background: var(--bg-main); padding: 20px; border-radius: var(--radius-md); margin-bottom: 20px; border: 1px solid var(--border); }
-    .extended-row { font-size: 14px; margin-bottom: 10px; display: flex; gap: 10px; align-items: baseline;}
-    .extended-row strong { color: var(--text-main); min-width: 120px; flex-shrink: 0;}
+    .extended-row { font-size: 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px; }
+    .extended-row strong { color: var(--text-main); font-weight: 700; }
 
-    /* Formatted Links Categorization */
-    .link-category { margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;}
-    .link-category h4 { font-size: 15px; color: var(--accent); margin-bottom: 10px; font-weight: 800;}
-    .link-group-title { font-size: 13px; font-weight: bold; color: var(--text-muted); margin: 8px 0 4px 0;}
-    .archive-links-box { display: flex; flex-wrap: wrap; gap: 8px; }
-    .archive-link-btn { display: inline-block; background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.2s; }
-    .archive-link-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    /* Quality Display Formatting Sections */
+    .quality-block-title { font-size: 15px; font-weight: 800; color: var(--accent); margin: 15px 0 8px 0; border-bottom: 2px solid var(--border); padding-bottom: 4px; }
+    .quality-season-title { font-size: 14px; font-weight: 700; color: var(--text-main); margin: 12px 0 6px 0; }
+    .quality-movie-line { display: block; font-size: 13px; background: var(--bg-surface); padding: 6px 12px; margin-bottom: 4px; border-radius: 6px; border: 1px solid var(--border); text-decoration: none; color: var(--text-main); width: 100%; max-width: 500px; }
+    .quality-movie-line:hover { background: var(--bg-main); border-color: var(--accent); }
+    .quality-series-inline-box { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .quality-series-btn { display: inline-block; background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); padding: 5px 12px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; }
+    .quality-series-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
 
-    .hero-plot { font-size: 15px; line-height: 1.8; color: var(--text-main); margin-bottom: 25px; padding: 15px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid var(--accent); position: relative;}
+    .hero-plot { font-size: 15px; line-height: 1.8; color: var(--text-main); margin-bottom: 25px; padding: 15px; background: #f1f5f9; border-radius: 8px; border-right: 4px solid var(--accent); position: relative; }
     .translating-pulse { animation: pulse 1.5s infinite; opacity: 0.7; }
     @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
@@ -100,51 +93,46 @@
     .ai-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
     .ai-result { font-size: 14px; line-height: 1.7; color: #1e3a8a; white-space: pre-wrap; }
 
-    /* Personal Review Block */
-    .review-block { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 25px; margin-top: 25px; box-shadow: var(--shadow-sm);}
-    .stars-rating { display: flex; gap: 8px; font-size: 28px; cursor: pointer; color: #cbd5e1; user-select: none; }
+    .review-block { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 25px; margin-top: 25px; box-shadow: var(--shadow-sm); }
+    .stars-rating { display: flex; gap: 8px; font-size: 28px; cursor: pointer; color: #cbd5e1; user-select: none; direction: ltr; justify-content: flex-end; }
     .stars-rating span.active { color: var(--warning); text-shadow: 0 0 2px rgba(245,158,11,0.3); }
 
-    /* Dashboard & Grid */
     .dashboard-stats { margin: 0 30px 30px 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
     .stat-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; text-align: center; box-shadow: var(--shadow-sm); }
     .stat-card h3 { font-size: 24px; font-weight: 900; color: var(--accent); margin-bottom: 5px; }
-    .stat-card p { font-size: 13px; color: var(--text-muted); font-weight: 500;}
+    .stat-card p { font-size: 13px; color: var(--text-muted); font-weight: 500; }
 
-    .section-title { margin: 30px 30px 15px 30px; font-size: 22px; font-weight: 800; color: var(--text-main); }
+    .section-title { margin: 30px 30px 15px 30px; font-size: 22px; font-weight: 800; color: var(--text-main); text-align: right; }
     
-    .controls-bar { margin: 0 30px 20px 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; background: var(--bg-surface); padding: 15px; border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-sm);}
+    .controls-bar { margin: 0 30px 20px 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; background: var(--bg-surface); padding: 15px; border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
     .filters-group { display: flex; gap: 10px; flex-wrap: wrap; }
-    .filter-btn { background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600;}
+    .filter-btn { background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600; }
     .filter-btn.active { background: var(--text-main); color: white; border-color: var(--text-main); }
-    select.form-control { background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); padding: 10px 15px; border-radius: 8px; outline: none; font-size: 14px;}
+    select.form-control { background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); padding: 10px 15px; border-radius: 8px; outline: none; font-size: 14px; }
 
     .main-grid { margin: 0 30px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 25px; }
-    .movie-card { background: var(--bg-surface); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); position: relative; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;}
-    .movie-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--accent);}
+    .movie-card { background: var(--bg-surface); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); position: relative; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; text-align: right; }
+    .movie-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
     .movie-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
-    .card-poster { width: 100%; height: 320px; object-fit: cover; background: #e2e8f0; border-bottom: 1px solid var(--border);}
-    .card-info { padding: 15px; display: flex; flex-direction: column; flex: 1;}
-    .card-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-main);}
-    .card-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: auto;}
+    .card-poster { width: 100%; height: 320px; object-fit: cover; background: #e2e8f0; border-bottom: 1px solid var(--border); }
+    .card-info { padding: 15px; display: flex; flex-direction: column; flex: 1; }
+    .card-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-main); }
+    .card-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: auto; }
     
-    /* Modals */
-    .modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 300; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; }
+    .modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 300; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
     .modal-backdrop.active { opacity: 1; pointer-events: auto; }
-    .modal-box { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-lg); padding: 30px; }
+    .modal-box { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-lg); padding: 30px; text-align: right; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
-    .modal-header h3 { font-size: 20px; font-weight: 800;}
+    .modal-header h3 { font-size: 20px; font-weight: 800; }
     
     .form-group { margin-bottom: 20px; }
     .form-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-main); }
-    .form-control { width: 100%; background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 12px; color: var(--text-main); font-size: 14px; outline: none; transition: border-color 0.2s;}
-    .form-control:focus { border-color: var(--accent); background: var(--bg-surface);}
-    
+    .form-control { width: 100%; background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 12px; color: var(--text-main); font-size: 14px; outline: none; text-align: right; }
+    .form-control:focus { border-color: var(--accent); background: var(--bg-surface); }
     textarea.form-control { resize: vertical; min-height: 100px; }
 
     @media (max-width: 768px) {
       .hero-content { flex-direction: column; align-items: center; text-align: center; }
-      .hero-extended-info .extended-row { flex-direction: column; gap: 2px;}
       .search-container { width: 100%; }
       header { justify-content: center; }
     }
@@ -156,7 +144,7 @@
     <div class="brand">🎬 CineTrack <span class="brand-highlight">Pro</span></div>
     <div class="search-container">
       <div class="search-wrapper">
-        <input type="text" id="searchInput" placeholder="Search for movies or series (English)..." oninput="handleSearch(this.value)">
+        <input type="text" id="searchInput" placeholder="Search for movies or series..." oninput="handleSearch(this.value)">
         <button onclick="clearSearchInput()">✖</button>
       </div>
       <div id="searchDropdown" class="search-dropdown"></div>
@@ -224,7 +212,7 @@
         <button class="btn btn-secondary" style="padding:5px 12px; border-radius: 8px;" onclick="closeModal('notesModal')">✖</button>
       </div>
       <div class="form-group">
-        <textarea id="generalNotesTextArea" class="form-control" style="min-height: 300px;" placeholder="Write your watch plans, lists, or general thoughts here..." oninput="saveGeneralNotes(this.value)"></textarea>
+        <textarea id="generalNotesTextArea" class="form-control" style="min-height: 300px;" placeholder="Write your notes here..." oninput="saveGeneralNotes(this.value)"></textarea>
       </div>
     </div>
   </div>
@@ -240,13 +228,12 @@
         <label>Interface & Plot Language</label>
         <select id="languageSelect" class="form-control">
           <option value="en">English (Original)</option>
-          <option value="fa">Persian / فارسی (Requires AI Key)</option>
+          <option value="fa">Persian / فارسی (AI Adaptation)</option>
         </select>
-        <p style="font-size:12px; color:var(--text-muted); margin-top:5px;">If Persian is selected, plots will be automatically translated using AI.</p>
       </div>
 
       <div class="form-group">
-        <label>OpenRouter API Key (For Translation & AI)</label>
+        <label>OpenRouter API Key</label>
         <input type="password" id="openRouterKeyInput" class="form-control" placeholder="sk-or-v1-...">
       </div>
 
@@ -267,13 +254,12 @@
 
       <div style="border-top: 1px solid var(--border); margin: 25px 0 15px 0; padding-top: 20px;">
         <label style="color: var(--accent); font-size: 15px;">📥 Archive Source File (HTML)</label>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Upload the raw HTML file of your local/remote archive directory to enable smart matching.</p>
         <input type="file" id="archiveHtmlFileInput" class="form-control" accept=".html,.htm" onchange="handleArchiveHtmlUpload(event)">
         <div id="archiveUploadStatus" style="font-size: 13px; color: var(--green); margin-top: 8px; font-weight: 600;"></div>
       </div>
 
       <div style="border-top: 1px solid var(--border); margin: 25px 0 15px 0; padding-top: 20px;">
-        <label style="color: var(--text-main); font-size: 15px;">💾 Database Management</label>
+        <label>💾 Database Management</label>
         <div style="display: flex; gap: 10px; margin-top: 10px;">
           <button class="btn btn-secondary" onclick="exportLibrary()">Export JSON</button>
           <button class="btn btn-secondary" onclick="document.getElementById('importFileInput').click()">Import JSON</button>
@@ -294,7 +280,6 @@
       filters: { status: 'all', type: 'all', special: 'all', genre: 'all' },
       sortBy: 'dateAdded',
       archiveHtmlSource: localStorage.getItem("cinetrack_archive_html_raw") || "",
-      audioReviews: JSON.parse(localStorage.getItem("cinetrack_audio_reviews") || "{}"),
       language: localStorage.getItem("cinetrack_language") || "en"
     };
 
@@ -330,15 +315,14 @@
       extractAndRenderGenres();
     }
 
-    /* ===================== ARCHIVE MATCHING ENGINE (PRESERVED) ===================== */
+    /* ===================== CRITICAL ARCHIVE ENGINE (BUG-FIXED PRESERVING STRUCTURE) ===================== */
     function handleArchiveHtmlUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
-        const rawText = e.target.result;
-        state.archiveHtmlSource = rawText;
-        localStorage.setItem("cinetrack_archive_html_raw", rawText);
+        state.archiveHtmlSource = e.target.result;
+        localStorage.setItem("cinetrack_archive_html_raw", e.target.result);
         document.getElementById("archiveUploadStatus").innerText = "✅ Source saved: " + file.name;
         if(state.selectedId) renderHero();
       };
@@ -363,92 +347,124 @@
 
         if (cleanImdbId && (hrefText.includes(cleanImdbId) || innerText.includes(cleanImdbId))) {
           isMatch = true;
-        } else if (cleanTitle && (hrefText.includes(cleanTitle) || innerText.includes(cleanTitle))) {
-          isMatch = true;
-        } else if (titleWords.length > 0) {
-          const matchAllWords = titleWords.every(word => hrefText.includes(word) || innerText.includes(word));
-          if (matchAllWords) isMatch = true;
+        } else if (cleanTitle) {
+          // Token Boundary Regex Optimization to fix broad substring collisions (e.g. "Her" matching "Godfather")
+          const escapedTitle = cleanTitle.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const tokenRegex = new RegExp(`(?:^|[^a-z0-9])${escapedTitle}(?:[^a-z0-9]|$)`, 'i');
+          
+          if (tokenRegex.test(hrefText) || tokenRegex.test(innerText)) {
+            isMatch = true;
+          } else if (titleWords.length > 0) {
+            const matchAllTokens = titleWords.every(word => {
+              const wordRegex = new RegExp(`(?:^|[^a-z0-9])${word}(?:[^a-z0-9]|$)`, 'i');
+              return wordRegex.test(hrefText) || wordRegex.test(innerText);
+            });
+            if (matchAllTokens) isMatch = true;
+          }
         }
 
         if (isMatch) {
           if (!matchedLinks.some(l => l.url === link.getAttribute('href'))) {
-            matchedLinks.push({ text: link.innerText.trim() || "Extracted Link", url: link.getAttribute('href') });
+            matchedLinks.push({ text: link.innerText.trim() || "Extracted File Link", url: link.getAttribute('href') });
           }
         }
       }
       return matchedLinks;
     }
 
-    /* ===================== LINK CATEGORIZATION FORMATTER ===================== */
+    /* ===================== COMPACT SPECIFICATION PRESENTATION DISPLAY ===================== */
     function formatCategorizedLinks(links, type) {
-      if (!links || links.length === 0) return `<p style="color:var(--text-muted); font-size: 13px;">No matching files found in your uploaded archive.</p>`;
+      if (!links || links.length === 0) return `<p style="color:var(--text-muted); font-size: 13px;">No matching archive files located.</p>`;
       
       const dubbedLinks = [];
       const softSubLinks = [];
 
-      // Pass 1: Separate Dubbed and SoftSub based on text clues
       links.forEach(link => {
         const txt = link.text.toLowerCase();
         const url = link.url.toLowerCase();
-        if (txt.includes('dubbed') || txt.includes('دوبله') || url.includes('dubbed')) {
+        if (txt.includes('dubbed') || txt.includes('دوبله') || url.includes('dubbed') || txt.includes('dual')) {
           dubbedLinks.push(link);
         } else {
           softSubLinks.push(link);
         }
       });
 
-      let html = `<div style="margin-top: 15px;">`;
+      let html = `<div>`;
 
-      const renderGroup = (groupLinks, title) => {
-        if(groupLinks.length === 0) return '';
-        let groupHtml = `<div class="link-category"><h4>${title}</h4>`;
-        
-        if (type === 'series') {
-          // Attempt to group by season
+      if (type === 'movie') {
+        // SoftSub Section
+        if (softSubLinks.length > 0) {
+          html += `<div class="quality-block-title">SoftSub</div>`;
+          softSubLinks.forEach(l => {
+            html += `<a href="${l.url}" target="_blank" class="quality-movie-line">${parseQualityAndSize(l.text)}</a>`;
+          });
+        }
+        // Dubbed Section
+        if (dubbedLinks.length > 0) {
+          html += `<div class="quality-block-title">Dubbed</div>`;
+          dubbedLinks.forEach(l => {
+            html += `<a href="${l.url}" target="_blank" class="quality-movie-line">${parseQualityAndSize(l.text)}</a>`;
+          });
+        }
+      } else {
+        // Series Logic: Grouped by Season
+        const renderSeriesGroup = (groupLinks, sectionTitle) => {
+          if (groupLinks.length === 0) return '';
+          let sHtml = '';
+          if(sectionTitle) sHtml += `<div class="quality-block-title">${sectionTitle}</div>`;
+          
           const seasons = {};
           groupLinks.forEach(l => {
             const match = l.text.match(/s(\d{1,2})/i) || l.text.match(/season\s*(\d{1,2})/i);
-            const seasonNum = match ? parseInt(match[1]) : 'Unknown';
+            const seasonNum = match ? parseInt(match[1]) : 1;
             if(!seasons[seasonNum]) seasons[seasonNum] = [];
             seasons[seasonNum].push(l);
           });
 
-          // Sort numeric keys, put 'Unknown' at end
-          const sortedKeys = Object.keys(seasons).sort((a, b) => {
-             if(a === 'Unknown') return 1; if(b === 'Unknown') return -1;
-             return parseInt(a) - parseInt(b);
+          Object.keys(seasons).sort((a,b) => a - b).forEach(s => {
+            sHtml += `<div class="quality-season-title">Season ${s}</div>`;
+            sHtml += `<div class="quality-series-inline-box">`;
+            const renderedQualities = seasons[s].map(l => {
+              return `<a href="${l.url}" target="_blank" class="quality-series-btn">${extractSimpleQuality(l.text)}</a>`;
+            });
+            sHtml += renderedQualities.join(' <span style="color:var(--border)">/</span> ');
+            sHtml += `</div>`;
           });
+          return sHtml;
+        };
 
-          sortedKeys.forEach(s => {
-            groupHtml += `<div class="link-group-title">Season ${s}</div><div class="archive-links-box">`;
-            seasons[s].forEach(l => { groupHtml += `<a href="${l.url}" target="_blank" class="archive-link-btn">${cleanQualityText(l.text)}</a>`; });
-            groupHtml += `</div>`;
-          });
-        } else {
-          // For Movies, just list them nicely
-          groupHtml += `<div class="archive-links-box">`;
-          groupLinks.forEach(l => { groupHtml += `<a href="${l.url}" target="_blank" class="archive-link-btn">${cleanQualityText(l.text)}</a>`; });
-          groupHtml += `</div>`;
+        html += renderSeriesGroup(softSubLinks, "");
+        if (dubbedLinks.length > 0) {
+          html += renderSeriesGroup(dubbedLinks, "Dubbed");
         }
-        groupHtml += `</div>`;
-        return groupHtml;
-      };
+      }
 
-      html += renderGroup(softSubLinks, "SoftSub / Original Audio");
-      html += renderGroup(dubbedLinks, "Dubbed Audio");
       html += `</div>`;
       return html;
     }
 
-    function cleanQualityText(txt) {
-      // Small helper to make extracted file names look slightly cleaner if they are raw filenames
-      return txt.replace(/\.(mkv|mp4|avi)$/i, '').replace(/_/g, ' ');
+    function parseQualityAndSize(filename) {
+      const clean = filename.replace(/\.(mkv|mp4|avi)$/i, '').replace(/[\._]/g, ' ');
+      const sizeMatch = clean.match(/(\d+(?:\.\d+)?\s*(?:GB|MB))/i);
+      const qualityMatch = clean.match(/(\d{3,4}p\s*(?:BluRay|Web\-DL|HDRip|x265|10bit)*)/i);
+      
+      if (qualityMatch && sizeMatch) {
+        return `${qualityMatch[1]} / ${sizeMatch[1]}`;
+      }
+      if (qualityMatch) return `${qualityMatch[1]}`;
+      return clean;
     }
 
-    /* ===================== PERSONAL RATING ===================== */
+    function extractSimpleQuality(filename) {
+      const clean = filename.replace(/[\._]/g, ' ');
+      const match = clean.match(/(\d{3,4}p\s*(?:BluRay|Web\-DL|x265|10bit)*)/i);
+      return match ? match[1] : "Download link";
+    }
+
+    /* ===================== INTERACTIVE RATINGS ===================== */
     function renderStarsInteractive(currentRating) {
       let html = '<div class="stars-rating">';
-      for (let i = 1; i <= 10; i++) {
+      for (let i = 10; i >= 1; i--) {
         const activeClass = i <= currentRating ? 'active' : '';
         html += `<span class="${activeClass}" onclick="setInteractiveRating(${i})">★</span>`;
       }
@@ -471,16 +487,13 @@
       if (!state.selectedId) return;
       const item = state.items.find(i => i.id === state.selectedId);
       if (!item) return;
-      const reviewText = document.getElementById("personalReviewTextarea").value;
-      item.personalReview = reviewText;
-      state.audioReviews[item.imdbID] = reviewText;
-      localStorage.setItem("cinetrack_audio_reviews", JSON.stringify(state.audioReviews));
+      item.personalReview = document.getElementById("personalReviewTextarea").value;
       saveStateToStorage();
       renderGrid();
       renderHero();
     }
 
-    /* ===================== OMDb ONLINE SEARCH ===================== */
+    /* ===================== OMDB SEARCH MODULE ===================== */
     function handleSearch(val) {
       clearTimeout(searchDebounceTimer);
       const dropdown = document.getElementById("searchDropdown");
@@ -499,7 +512,7 @@
               `).join('');
               dropdown.style.display = "block";
             } else {
-              dropdown.innerHTML = `<div style="padding:15px; font-size:13px; color:var(--text-muted); text-align:center;">No results found online.</div>`;
+              dropdown.innerHTML = `<div style="padding:15px; font-size:13px; color:var(--text-muted); text-align:center;">Item not found.</div>`;
               dropdown.style.display = "block";
             }
           }).catch(err => console.error(err));
@@ -513,7 +526,6 @@
 
     function selectSearchItem(imdbID) {
       document.getElementById("searchDropdown").style.display = "none";
-      // Fetch full details to get plot, actors, etc immediately
       fetch(`https://www.omdbapi.com/?i=${imdbID}&plot=full&apikey=${OMDB_KEY}`)
         .then(res => res.json())
         .then(data => {
@@ -521,9 +533,9 @@
           const content = document.getElementById("addModalContent");
           content.innerHTML = `
             <div style="display:flex; gap:15px; margin-bottom:20px; align-items:center;">
-              <img src="${data.Poster !== 'N/A' ? data.Poster : 'https://via.placeholder.com/100x150?text=No+Cover'}" style="width:80px; height:120px; object-fit:cover; border-radius:8px; box-shadow:var(--shadow-sm);">
+              <img src="${data.Poster !== 'N/A' ? data.Poster : 'https://via.placeholder.com/100x150?text=No+Cover'}" style="width:80px; height:120px; object-fit:cover; border-radius:8px;">
               <div>
-                <h4 style="font-size:18px; font-weight:800; color:var(--text-main); line-height:1.2;">${data.Title}</h4>
+                <h4 style="font-size:18px; font-weight:800; color:var(--text-main);">${data.Title}</h4>
                 <p style="color:var(--text-muted); font-size:13px; margin: 4px 0;">${data.Year} | ${data.Genre}</p>
                 <span class="badge badge-warning">IMDb: ⭐ ${data.imdbRating}</span>
               </div>
@@ -545,7 +557,7 @@
 
     function confirmAddItem(data) {
       if (state.items.some(i => i.imdbID === data.imdbID)) {
-        alert("This item is already in your library!");
+        alert("This item already exists in your local library!");
         closeModal('addModal'); return;
       }
       const newItem = {
@@ -564,28 +576,34 @@
       document.getElementById('heroAnchor').scrollIntoView({ behavior: 'smooth' });
     }
 
-    /* ===================== AI PLOT TRANSLATION ===================== */
+    /* ===================== AI PLOT TRANSLATION MODULE (BUG-FIXED) ===================== */
     async function translatePlotToPersian(item) {
       const apiKey = localStorage.getItem("cinetrack_or_key");
       const model = localStorage.getItem("cinetrack_or_model") || "deepseek/deepseek-chat";
-      if (!apiKey) return "⚠️ API Key required for Persian translation. Please add it in settings or switch to English.";
+      if (!apiKey) return "⚠️ Error: OpenRouter API Key missing. Please provide it inside Settings.";
       
-      const prompt = `Translate the following movie/series plot summary to fluent, high-quality Persian (Farsi). Provide ONLY the translated text, with no introductory or concluding remarks.\n\nPlot: ${item.plot}`;
+      const prompt = `Translate the following movie summary into natural, fluent Persian (Farsi). Output ONLY the translated text, no commentary, no intro.\n\nPlot: ${item.plot}`;
       
       try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
-          headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          headers: { 
+            "Authorization": `Bearer ${apiKey}`, 
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/cinetrack",
+            "X-Title": "CineTrack Pro"
+          },
           body: JSON.stringify({ model: model, messages: [{ role: "user", content: prompt }] })
         });
         const data = await response.json();
-        if (data.choices && data.choices[0]) {
+        if (data && data.choices && data.choices[0] && data.choices[0].message) {
           return data.choices[0].message.content.trim();
-        } else {
-          return "⚠️ Error: Invalid response from AI server.";
+        } else if (data.error) {
+          return `⚠️ OpenRouter Error: ${data.error.message || JSON.stringify(data.error)}`;
         }
+        return "⚠️ Error: Received invalid format response from provider.";
       } catch (err) {
-        return "⚠️ Error: Network failure during translation.";
+        return "⚠️ Error: Connection to OpenRouter failed.";
       }
     }
 
@@ -594,21 +612,26 @@
       if (!plotElement) return;
 
       if (state.language === 'en') {
-        plotElement.innerText = item.plot || 'No plot available.';
+        plotElement.innerText = item.plot || 'No plot summary available.';
+        plotElement.style.direction = 'ltr';
+        plotElement.style.textAlign = 'left';
         plotElement.classList.remove('translating-pulse');
       } else if (state.language === 'fa') {
         if (item.plotFa) {
           plotElement.innerText = item.plotFa;
-          plotElement.dir = 'rtl';
+          plotElement.style.direction = 'rtl';
+          plotElement.style.textAlign = 'right';
           plotElement.classList.remove('translating-pulse');
         } else if (item.plot && item.plot !== 'N/A') {
-          plotElement.innerText = "در حال ترجمه هوشمند خلاصه داستان...";
-          plotElement.dir = 'rtl';
+          plotElement.innerText = "⏳ در حال ترجمه هوشمند خلاصه داستان توسط هوش مصنوعی...";
+          plotElement.style.direction = 'rtl';
+          plotElement.style.textAlign = 'right';
           plotElement.classList.add('translating-pulse');
+          
           const translated = await translatePlotToPersian(item);
           item.plotFa = translated;
           saveStateToStorage();
-          // Update DOM if we are still looking at the same item
+          
           if (state.selectedId === item.id) {
             const freshEl = document.getElementById(`plot_box_${item.id}`);
             if(freshEl) {
@@ -617,30 +640,28 @@
             }
           }
         } else {
-            plotElement.innerText = "خلاصه داستانی برای ترجمه یافت نشد.";
-            plotElement.dir = 'rtl';
+            plotElement.innerText = "خلاصه داستانی یافت نشد.";
         }
       }
     }
 
-    /* ===================== DETAIL VIEW HERO SECTION ===================== */
+    /* ===================== RENDER HERO ENGINE ===================== */
     function renderHero() {
       const container = document.getElementById("heroSection");
       if (!state.selectedId || state.items.length === 0) {
-        container.innerHTML = `<div class="hero-empty"><span style="font-size:48px;">🎬</span><p>Select a movie or series from your library to view details, notes, and archive downloads.</p></div>`;
+        container.innerHTML = `<div class="hero-empty"><span>🎬</span><p>Select a title from your library to display details, customized local layouts, and file links.</p></div>`;
         return;
       }
 
       const item = state.items.find(i => i.id === state.selectedId);
       if (!item) { container.innerHTML = ""; return; }
 
-      // Archive Link Extraction (Logic Untouched, Output Formatted)
       const matchedLinks = findMatchInArchive(item.imdbID, item.title);
-      let archiveSectionHtml = `<div class="extended-row"><strong>💾 Archive Files:</strong> <div style="flex:1;">`;
+      let archiveSectionHtml = `<div class="extended-row"><strong>📁 Available Formats & Qualities:</strong> <div style="flex:1; width:100%;">`;
       if (state.archiveHtmlSource) {
         archiveSectionHtml += formatCategorizedLinks(matchedLinks, item.type);
       } else {
-        archiveSectionHtml += `<span style="font-size:13px; color:var(--warning);">Upload your HTML archive file in Settings to enable smart link extraction.</span>`;
+        archiveSectionHtml += `<span style="font-size:13px; color:var(--warning);">Upload archive source inside System Settings to load files.</span>`;
       }
       archiveSectionHtml += `</div></div>`;
 
@@ -649,10 +670,10 @@
         progressHtml = `
           <div style="background: var(--bg-main); padding: 15px; border-radius: 8px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div>
-              <span style="font-weight:bold; color:var(--text-main); display:block; font-size:14px;">Series Progress</span>
+              <span style="font-weight:bold; display:block; font-size:14px;">Series Progress Tracker</span>
               <span style="font-size:13px; color:var(--text-muted);">Season ${item.season || 1} | Episode ${item.episode || 1}</span>
             </div>
-            <button class="btn btn-secondary" style="font-size:13px; padding:6px 12px;" onclick="openProgressModal('${item.id}')">Update</button>
+            <button class="btn btn-secondary" style="font-size:13px; padding:6px 12px;" onclick="openProgressModal('${item.id}')">Modify Progress</button>
           </div>`;
       }
 
@@ -669,12 +690,12 @@
               <span class="badge">${item.runtime}</span>
             </div>
 
-            <p class="hero-plot" id="plot_box_${item.id}">${item.plot || 'No plot available.'}</p>
+            <p class="hero-plot" id="plot_box_${item.id}">${item.plot || ''}</p>
 
             <div class="hero-extended-info">
               <div class="extended-row"><strong>🎭 Genres:</strong> <span>${item.genre}</span></div>
               <div class="extended-row"><strong>🎬 Director:</strong> <span>${item.director}</span></div>
-              <div class="extended-row"><strong>👥 Actors:</strong> <span>${item.actors}</span></div>
+              <div class="extended-row"><strong>👥 Starring Cast:</strong> <span>${item.actors}</span></div>
               ${archiveSectionHtml}
             </div>
             
@@ -682,26 +703,25 @@
 
             <div class="ai-box">
               <div class="ai-header">
-                <span style="font-size: 15px; font-weight: 800; color: var(--accent);">🤖 AI Recommendations</span>
-                <button class="btn" style="font-size: 12px; padding: 6px 14px;" onclick="getSimilarMoviesAI('${item.id}')">Find Similar</button>
+                <span style="font-size: 15px; font-weight: 800; color: var(--accent);">🤖 Smart Recommendations</span>
+                <button class="btn" style="font-size: 12px; padding: 6px 14px;" onclick="getSimilarMoviesAI('${item.id}')">Generate</button>
               </div>
-              <div class="ai-result" id="miniAiResultBox_${item.id}">Click to ask AI for 3 similar masterpieces based on this title...</div>
+              <div class="ai-result" id="miniAiResultBox_${item.id}">Request 3 contextual lookalikes based on structural tags...</div>
             </div>
 
             <div class="review-block">
-              <h3 style="font-size:16px; font-weight:800; margin-bottom:15px; color:var(--text-main);">My Personal Review</h3>
-              <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px; flex-wrap:wrap;">
-                <span style="font-size:14px; color:var(--text-muted); font-weight:600;">Rating:</span>
-                ${renderStarsInteractive(item.userRating || 0)}
+              <h3 style="font-size:16px; font-weight:800; margin-bottom:15px;">My Personal Review</h3>
+              <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px; flex-wrap:wrap; justify-content:space-between; direction:ltr;">
                 <span style="font-weight:bold; font-size:15px; color:var(--text-main);">${item.userRating ? item.userRating + ' / 10' : 'Unrated'}</span>
+                ${renderStarsInteractive(item.userRating || 0)}
               </div>
               
               <div class="form-group">
-                <textarea id="personalReviewTextarea" class="form-control" style="background:var(--bg-main);" placeholder="Write your personal thoughts, notes, or review here...">${item.personalReview || ''}</textarea>
+                <textarea id="personalReviewTextarea" class="form-control" placeholder="Write personal logs, notes or watch reflections here...">${item.personalReview || ''}</textarea>
               </div>
               <div style="display:flex; gap:10px; justify-content: space-between; flex-wrap: wrap;">
                 <button class="btn" onclick="savePersonalReviewAndRating()">💾 Save Review & Rating</button>
-                <button class="btn btn-danger" onclick="deleteItem('${item.id}')">🗑️ Delete from Library</button>
+                <button class="btn btn-danger" onclick="deleteItem('${item.id}')">🗑️ Remove Entry</button>
               </div>
             </div>
           </div>
@@ -714,13 +734,13 @@
       const apiKey = localStorage.getItem("cinetrack_or_key");
       const model = localStorage.getItem("cinetrack_or_model") || "deepseek/deepseek-chat";
       const item = state.items.find(i => i.id === itemId);
-      if (!apiKey) { alert("Please enter your OpenRouter API Key in settings first."); return; }
+      if (!apiKey) { alert("Please input your OpenRouter key inside configuration menu."); return; }
       if (!item) return;
 
       const resultBox = document.getElementById(`miniAiResultBox_${itemId}`);
-      resultBox.innerText = "⏳ Analyzing traits and fetching similar titles...";
-      const langInst = state.language === 'fa' ? 'زبان پاسخ باید حتما فارسی باشد.' : 'Respond in English.';
-      const prompt = `Based on the following item:\nTitle: ${item.title}\nGenre: ${item.genre}\nPlot: ${item.plot}\n\nRecommend exactly 3 highly similar movies/series. Format: Year - Title - One very short sentence explaining why it's similar. Keep it extremely brief. ${langInst}`;
+      resultBox.innerText = "⏳ Querying recommendations...";
+      const langInst = state.language === 'fa' ? 'پاسخ باید کاملا به زبان فارسی باشد.' : 'Respond strictly in English.';
+      const prompt = `Based on context: Title: ${item.title}, Genre: ${item.genre}, Description: ${item.plot}. Recommend exactly 3 highly accurate equivalent alternatives. Format: Year - Title - Brief 1-sentence analytical reason. ${langInst}`;
       
       try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -728,36 +748,27 @@
           body: JSON.stringify({ model: model, messages: [{ role: "user", content: prompt }] })
         });
         const data = await response.json();
-        if (data.choices && data.choices[0]) {
+        if (data && data.choices && data.choices[0]) {
           resultBox.innerText = data.choices[0].message.content.trim();
-          if(state.language==='fa') resultBox.dir = 'rtl';
-        } else { resultBox.innerText = "Error: Invalid response from AI."; }
-      } catch (err) { resultBox.innerText = "Network Error."; }
+        } else { resultBox.innerText = "Error: Failed to obtain correct response data."; }
+      } catch (err) { resultBox.innerText = "Network transmission failed."; }
     }
 
-    /* ===================== DASHBOARD STATS ===================== */
+    /* ===================== METRICS & DASHBOARD ===================== */
     function renderDashboard() {
       const total = state.items.length;
       const watching = state.items.filter(i => i.status === "Watching").length;
       const planned = state.items.filter(i => i.status === "Planned").length;
       const completed = state.items.filter(i => i.status === "Completed").length;
       
-      const stats = [
-        { title: total, desc: 'Total Items' },
-        { title: watching, desc: 'Watching' },
-        { title: planned, desc: 'Planned' },
-        { title: completed, desc: 'Completed' }
-      ];
-
-      document.getElementById("dashboardStats").innerHTML = stats.map(s => `
-        <div class="stat-card">
-          <h3>${s.title}</h3>
-          <p>${s.desc}</p>
-        </div>
-      `).join('');
+      document.getElementById("dashboardStats").innerHTML = `
+        <div class="stat-card"><h3>${total}</h3><p>Total Items</p></div>
+        <div class="stat-card"><h3>${watching}</h3><p>⏳ Watching</p></div>
+        <div class="stat-card"><h3>${planned}</h3><p>📅 Planned</p></div>
+        <div class="stat-card"><h3>${completed}</h3><p>✅ Completed</p></div>
+      `;
     }
 
-    /* ===================== GENRE EXTRACTOR ===================== */
     function extractAndRenderGenres() {
       const select = document.getElementById("genreFilterSelect");
       const currentSelected = state.filters.genre;
@@ -771,7 +782,6 @@
       select.innerHTML = html;
     }
 
-    /* ===================== GRID RENDERING ===================== */
     function renderGrid() {
       const grid = document.getElementById("mainGrid");
       grid.innerHTML = "";
@@ -789,7 +799,7 @@
       });
 
       if (filtered.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted); font-size:15px; font-weight:600;">No matching items found.</div>`;
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted); font-size:15px;">No active index listings.</div>`;
         return;
       }
 
@@ -819,14 +829,13 @@
 
     function selectCard(id) {
       state.selectedId = id;
-      document.querySelectorAll(".movie-card").forEach(c => c.classList.remove("selected"));
       renderGrid();
       renderHero();
       document.getElementById('heroAnchor').scrollIntoView({ behavior: 'smooth' });
     }
 
     function deleteItem(id) {
-      if (confirm("Are you sure you want to delete this from your library?")) {
+      if (confirm("Are you sure you want to drop this index record?")) {
         state.items = state.items.filter(i => i.id !== id);
         if (state.selectedId === id) state.selectedId = null;
         saveStateToStorage();
@@ -834,13 +843,13 @@
       }
     }
 
-    /* ===================== SERIES PROGRESS MODAL ===================== */
+    /* ===================== SUBSIDIARY MODAL CONTROLS ===================== */
     function openProgressModal(id) {
       const item = state.items.find(i => i.id === id);
       if (!item) return;
       const content = document.getElementById("progressModalContent");
       content.innerHTML = `
-        <div style="display:flex; gap:15px;">
+        <div style="display:flex; gap:15px; margin-bottom: 15px;">
           <div class="form-group" style="flex:1;">
             <label>Season</label>
             <input type="number" id="modalSeasonInput" class="form-control" value="${item.season || 1}" min="1">
@@ -850,8 +859,7 @@
             <input type="number" id="modalEpisodeInput" class="form-control" value="${item.episode || 1}" min="1">
           </div>
         </div>
-        <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">Total Database Seasons: ${item.totalSeasons || 'Unknown'}</p>
-        <button class="btn" style="width:100%; padding:12px;" onclick="saveProgress('${item.id}')">Save Progress</button>
+        <button class="btn" style="width:100%; padding:12px;" onclick="saveProgress('${item.id}')">Apply Tracking Changes</button>
       `;
       document.getElementById("progressModal").classList.add("active");
     }
@@ -867,14 +875,14 @@
       }
     }
 
-    /* ===================== BACKUP & DATA INTERACTION ===================== */
     function exportLibrary() {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.items, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `cinetrack_library_${Date.now()}.json`);
+      downloadAnchor.setAttribute("download", `cinetrack_backup.json`);
       document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove();
     }
+
     function importLibrary(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -884,14 +892,13 @@
           const parsed = JSON.parse(e.target.result);
           if (Array.isArray(parsed)) {
             state.items = parsed; saveStateToStorage(); init();
-            alert(`Import successful! ${parsed.length} items loaded.`);
+            alert(`Loaded ${parsed.length} database item records.`);
           }
-        } catch (err) { alert("Invalid backup file."); }
+        } catch (err) { alert("Corrupted profile blueprint."); }
       };
       reader.readAsText(file);
     }
 
-    /* ===================== CONTROLS & UI STATE ===================== */
     function setFilter(key, value) {
       if (key === 'status') { state.filters.status = value; state.filters.type = 'all'; }
       else if (key === 'type') { state.filters.type = value; state.filters.status = 'all'; }
@@ -912,14 +919,13 @@
       } else { buttons[0].classList.add("active"); }
     }
 
-    /* ===================== MODALS ===================== */
     function openNotesModal() { document.getElementById("notesModal").classList.add("active"); }
     function saveGeneralNotes(val) { localStorage.setItem("cinetrack_general_notes", val); }
     function openSettingsModal() { document.getElementById("settingsModal").classList.add("active"); }
     function toggleCustomModelField(val) { document.getElementById("customModelGroup").style.display = (val === "custom") ? "block" : "none"; }
     
     function saveSettings() {
-      const key = document.getElementById("openRouterKeyInput").value;
+      const key = document.getElementById("openRouterKeyInput").value.trim();
       const selectVal = document.getElementById("aiModelSelect").value;
       let finalModel = selectVal === "custom" ? document.getElementById("customModelInput").value.trim() : selectVal;
 
@@ -932,11 +938,11 @@
       localStorage.setItem("cinetrack_language", state.language);
       
       closeModal('settingsModal');
-      
       if(langChanged && state.selectedId) {
-          renderHero(); // Re-render to trigger translation or original text logic
+          renderHero();
       }
     }
+    
     function closeModal(id) { document.getElementById(id).classList.remove("active"); }
 
     window.onload = init;
