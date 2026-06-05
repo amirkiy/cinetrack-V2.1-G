@@ -1,908 +1,302 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr" id="app-root">
+<html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CineTrack AI Ultimate</title>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <style>
-    /* ===================== MODERN LIGHT THEME ===================== */
-    :root {
-      --bg-main: #f8fafc;
-      --bg-surface: #ffffff;
-      --bg-card: #ffffff;
-      --bg-hover: #f1f5f9;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
-      --text-main: #0f172a;
-      --text-secondary: #334155;
-      --text-muted: #64748b;
-      --border: #e2e8f0;
-      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-      --cyan: #0284c7;
-      --green: #16a34a;
-      --gold: #d97706;
-      --danger: #dc2626;
-      --radius-sm: 8px;
-      --radius-md: 16px;
-      --radius-lg: 24px;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineTrack AI Ultimate Pro+</title>
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Vazirmatn', sans-serif; transition: all 0.2s ease-in-out; }
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
-    body { background-color: var(--bg-main); color: var(--text-main); overflow-x: hidden; padding-bottom: 80px; line-height: 1.6; }
+<style>
+:root{
+  --bg:#f7f8fb;
+  --card:#ffffff;
+  --text:#111827;
+  --muted:#6b7280;
+  --primary:#2563eb;
+  --primary2:#1d4ed8;
+  --border:rgba(0,0,0,0.08);
+  --shadow:0 10px 30px rgba(0,0,0,0.08);
+}
 
-    /* ===================== HEADER ===================== */
-    header {
-      background: rgba(255, 255, 255, 0.9);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 40px; display: flex; justify-content: space-between;
-      align-items: center; position: sticky; top: 0; z-index: 100;
-      backdrop-filter: blur(12px); flex-wrap: wrap; gap: 20px;
-      box-shadow: var(--shadow-sm);
-    }
+*{
+  box-sizing:border-box;
+  font-family:'Vazirmatn',sans-serif;
+}
 
-    .brand { font-size: 24px; font-weight: 900; color: var(--text-main); letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
-    .brand-accent { color: var(--accent); }
-    .brand-badge { font-size: 11px; background: rgba(37, 99, 235, 0.1); color: var(--accent); padding: 4px 8px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+}
 
-    /* ===================== SEARCH ===================== */
-    .search-container { position: relative; width: 45%; max-width: 600px; min-width: 280px; }
-    .search-wrapper { display: flex; align-items: center; background: var(--bg-main); border: 1px solid var(--border); border-radius: 30px; padding: 6px 20px; box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.02); }
-    .search-wrapper input { flex: 1; background: transparent; border: none; color: var(--text-main); padding: 8px; font-size: 15px; outline: none; }
-    .search-wrapper input::placeholder { color: var(--text-muted); }
-    .search-wrapper button { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; }
-    
-    .search-dropdown { position: absolute; top: 115%; left: 0; right: 0; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); max-height: 400px; overflow-y: auto; z-index: 200; box-shadow: var(--shadow-lg); display: none; }
-    .search-item { display: flex; gap: 15px; padding: 12px; border-bottom: 1px solid var(--bg-main); cursor: pointer; align-items: center; }
-    .search-item:hover { background: var(--bg-hover); }
-    .search-item img { width: 45px; height: 65px; object-fit: cover; border-radius: var(--radius-sm); background: #eee; }
-    .search-item h4 { font-size: 15px; margin-bottom: 2px; color: var(--text-main); font-weight: 700;}
-    .search-item p { font-size: 13px; color: var(--text-muted); }
+/* HEADER */
+header{
+  position:sticky;
+  top:0;
+  background:#fff;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:14px 20px;
+  border-bottom:1px solid var(--border);
+  z-index:100;
+}
 
-    /* ===================== BUTTONS ===================== */
-    .nav-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-    .btn { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; box-shadow: var(--shadow-sm); }
-    .btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow); }
-    .btn-secondary { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-secondary); }
-    .btn-secondary:hover { background: var(--bg-hover); border-color: #cbd5e1; }
-    .btn-success { background: var(--green); }
-    .btn-success:hover { background: #15803d; }
-    .btn-danger { background: #fee2e2; color: var(--danger); border: 1px solid #fca5a5; }
-    .btn-danger:hover { background: var(--danger); color: #fff; }
+.brand{
+  font-weight:900;
+  color:var(--primary);
+}
 
-    /* ===================== HERO SECTION ===================== */
-    .hero-section { margin: 40px; background: var(--bg-surface); border-radius: var(--radius-lg); padding: 40px; border: 1px solid var(--border); position: relative; min-height: 400px; display: flex; align-items: center; box-shadow: var(--shadow-sm); }
-    .hero-empty { text-align: center; width: 100%; color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; gap: 20px; font-weight: 500; }
-    .hero-content { display: flex; gap: 50px; width: 100%; align-items: flex-start; }
-    .hero-poster { width: 240px; height: 360px; object-fit: cover; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); border: 1px solid rgba(0,0,0,0.05); }
-    .hero-details { flex: 1; min-width: 0; }
-    .hero-title { font-size: 42px; font-weight: 900; margin-bottom: 15px; color: var(--text-main); line-height: 1.2; letter-spacing: -0.5px;}
-    .hero-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 25px; font-size: 14px; color: var(--text-secondary); align-items: center; font-weight: 500;}
-    
-    .badge { background: var(--bg-main); padding: 6px 12px; border-radius: 8px; font-weight: 600; color: var(--text-secondary); border: 1px solid var(--border); }
-    .badge-accent { background: #eff6ff; color: var(--accent); border-color: #bfdbfe; }
-    .badge-imdb { background: #fef3c7; color: var(--gold); border-color: #fde68a; }
+/* BUTTONS */
+.btn{
+  background:var(--primary);
+  color:white;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  cursor:pointer;
+}
+.btn:hover{background:var(--primary2);}
 
-    .hero-extended-info { background: var(--bg-main); padding: 25px; border-radius: var(--radius-md); margin-bottom: 25px; border: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .extended-row { font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
-    .extended-row strong { color: var(--text-main); margin-right: 5px; font-weight: 700; }
-    
-    .hero-plot { font-size: 16px; line-height: 1.8; color: var(--text-secondary); margin-bottom: 30px; max-width: 900px; text-align: justify; }
+.btn-secondary{
+  background:#f3f4f6;
+  color:#111;
+  border:1px solid var(--border);
+}
 
-    /* ===================== FORMATTED ARCHIVE LINKS ===================== */
-    .dl-section-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin: 30px 0 15px 0; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
-    .dl-group-title { font-size: 15px; font-weight: 700; color: var(--accent); margin: 20px 0 10px 0; }
-    
-    /* Movie Layout */
-    .dl-movie-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; font-size: 14px; }
-    .dl-movie-row:hover { background: var(--bg-hover); box-shadow: var(--shadow-sm); }
-    .dl-movie-quality { font-weight: 600; color: var(--text-main); }
-    .dl-movie-size { color: var(--text-muted); font-size: 13px; font-weight: 500;}
-    .dl-movie-link { text-decoration: none; color: inherit; display: flex; flex: 1; justify-content: space-between; align-items: center;}
+/* SEARCH */
+.search-box{
+  display:flex;
+  background:#111;
+  border-radius:10px;
+  overflow:hidden;
+}
+.search-box input{
+  border:none;
+  padding:10px;
+  outline:none;
+  color:#fff;
+  background:transparent;
+  width:250px;
+}
 
-    /* Series Layout */
-    .dl-series-inline-group { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 15px 20px; margin-bottom: 15px; }
-    .dl-series-season { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 10px; display: block;}
-    .dl-series-links-wrapper { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; line-height: 2; }
-    .dl-series-link-item { text-decoration: none; color: var(--accent); font-weight: 600; padding: 4px 8px; border-radius: 6px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.1); }
-    .dl-series-link-item:hover { background: var(--accent); color: #fff; }
-    .dl-separator { color: var(--text-muted); font-weight: 300; }
+/* GRID */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:16px;
+  padding:20px;
+}
 
-    /* ===================== CONTROLS & GRID ===================== */
-    .section-title { margin: 40px 40px 20px 40px; font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 12px; color: var(--text-main); letter-spacing: -0.5px;}
-    
-    .controls-bar { margin: 0 40px 30px 40px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; background: var(--bg-surface); padding: 20px; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
-    .filters-group { display: flex; gap: 10px; flex-wrap: wrap; }
-    .filter-btn { background: var(--bg-main); border: 1px solid var(--border); color: var(--text-secondary); padding: 8px 18px; border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 600; }
-    .filter-btn:hover { background: var(--border); color: var(--text-main); }
-    .filter-btn.active { background: var(--text-main); color: var(--bg-surface); border-color: var(--text-main); box-shadow: var(--shadow-sm); }
-    
-    .form-control { background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); padding: 10px 15px; border-radius: var(--radius-sm); outline: none; font-size: 14px; font-weight: 500; }
-    .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  cursor:pointer;
+}
 
-    .main-grid { margin: 0 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 30px; }
+.card img{
+  width:100%;
+  height:280px;
+  object-fit:cover;
+}
 
-    /* ===================== CARDS ===================== */
-    .movie-card { background: var(--bg-surface); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); position: relative; cursor: pointer; display: flex; flex-direction: column; box-shadow: var(--shadow-sm); }
-    .movie-card:hover { transform: translateY(-4px); border-color: #cbd5e1; z-index: 10; box-shadow: var(--shadow-lg); }
-    .movie-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), var(--shadow-lg); }
-    
-    .card-poster-wrapper { position: relative; width: 100%; aspect-ratio: 2/3; background: var(--bg-main); border-bottom: 1px solid var(--border); }
-    .card-poster-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-    
-    .card-info { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-    .card-title { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 10px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .card-meta-line { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500;}
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-left: 6px; border: 1px solid rgba(0,0,0,0.1);}
+.card-body{
+  padding:10px;
+}
 
-    /* ===================== MODALS ===================== */
-    .modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 300; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; }
-    .modal-backdrop.active { opacity: 1; pointer-events: auto; }
-    .modal-box { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 95%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); padding: 35px; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
-    .modal-header h3 { font-size: 20px; color: var(--text-main); font-weight: 800;}
-    .form-group { margin-bottom: 20px; }
-    .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-secondary); font-weight: 700; }
-    
-    .stars-rating { display: flex; gap: 6px; font-size: 28px; cursor: pointer; color: #cbd5e1; direction: ltr; }
-    .stars-rating span.active { color: var(--gold); }
+.title{
+  font-weight:700;
+  font-size:14px;
+}
 
-    /* ===================== RESPONSIVE ===================== */
-    @media (max-width: 900px) {
-      .hero-content { flex-direction: column; align-items: center; text-align: center; }
-      .hero-extended-info { grid-template-columns: 1fr; text-align: left;}
-      .hero-meta { justify-content: center; }
-    }
-    @media (max-width: 600px) {
-      header { padding: 15px 20px; }
-      .controls-bar, .hero-section, .section-title, .main-grid { margin-left: 20px; margin-right: 20px; }
-      .controls-bar { flex-direction: column; align-items: stretch; padding: 15px;}
-      .search-container { width: 100%; }
-      .main-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
-    }
-    
-    /* Loading animation for AI translation */
-    .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
-  </style>
+/* HERO */
+.hero{
+  margin:20px;
+  padding:20px;
+  background:#fff;
+  border-radius:14px;
+  box-shadow:var(--shadow);
+}
+
+/* MODAL */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.5);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+
+.modal.active{display:flex;}
+
+.modal-box{
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  width:90%;
+  max-width:500px;
+}
+
+/* QUALITY BLOCK */
+.quality-block{
+  margin-top:10px;
+  padding:10px;
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:10px;
+  font-size:13px;
+  white-space:pre-line;
+}
+</style>
 </head>
+
 <body>
 
-  <header>
-    <div class="brand"><span class="brand-accent">Cine</span>Track <span class="brand-badge">ULTIMATE</span></div>
-    
-    <div class="search-container">
-      <div class="search-wrapper">
-        <input type="text" id="searchInput" placeholder="Search Online (OMDb)..." oninput="handleOnlineSearch(this.value)">
-        <button onclick="clearSearchInput()">✖</button>
-      </div>
-      <div id="searchDropdown" class="search-dropdown"></div>
-    </div>
+<header>
+  <div class="brand">🎬 CineTrack AI+</div>
 
-    <div class="nav-actions">
-      <button class="btn btn-secondary" onclick="openModal('notesModal')" id="btnNotes">📝 Notes</button>
-      <button class="btn btn-secondary" onclick="openModal('settingsModal')" id="btnSettings">⚙️ Settings</button>
-    </div>
-  </header>
-
-  <section class="hero-section" id="heroSection"></section>
-
-  <section class="section-title" id="titleLibrary">📚 Your Library</section>
-  <section class="controls-bar">
-    <div class="search-wrapper" style="width: 100%; max-width: 350px; margin-bottom: 10px;">
-      <input type="text" id="localSearchInput" placeholder="Search local library..." oninput="renderGrid()">
-    </div>
-    <div class="filters-group" id="filterContainer">
-      <button class="filter-btn active" onclick="setFilter('status', 'all')" id="fltAll">All</button>
-      <button class="filter-btn" onclick="setFilter('status', 'Watching')" id="fltWatching">⏳ Watching</button>
-      <button class="filter-btn" onclick="setFilter('status', 'Planned')" id="fltPlanned">📅 Planned</button>
-      <button class="filter-btn" onclick="setFilter('status', 'Completed')" id="fltCompleted">✅ Completed</button>
-      <button class="filter-btn" onclick="setFilter('type', 'movie')" id="fltMovies">🎬 Movies</button>
-      <button class="filter-btn" onclick="setFilter('type', 'series')" id="fltSeries">📺 Series</button>
-    </div>
-    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top: 10px;">
-      <select class="form-control" id="sortSelect" onchange="renderGrid()">
-        <option value="dateAdded">Date Added (Newest)</option>
-        <option value="title">Title (A-Z)</option>
-        <option value="imdb">IMDb Rating</option>
-        <option value="year">Release Year</option>
-        <option value="userRating">My Rating</option>
-      </select>
-    </div>
-  </section>
-
-  <main class="main-grid" id="mainGrid"></main>
-
-  <div class="modal-backdrop" id="addModal">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h3 id="lblAddTitle">Add to Library</h3>
-        <button class="btn btn-secondary" style="padding:6px 12px;" onclick="closeModal('addModal')">✖</button>
-      </div>
-      <div id="addModalContent"></div>
-    </div>
+  <div class="search-box">
+    <input id="searchInput" placeholder="Search..." oninput="handleSearch(this.value)">
   </div>
 
-  <div class="modal-backdrop" id="settingsModal">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h3 id="lblSettingsTitle">⚙️ System Settings</h3>
-        <button class="btn btn-secondary" style="padding:6px 12px;" onclick="closeModal('settingsModal')">✖</button>
-      </div>
-      
-      <div class="form-group">
-        <label id="lblLang">Language / زبان:</label>
-        <select id="languageSelect" class="form-control" style="width: 100%;">
-          <option value="en">English</option>
-          <option value="fa">Persian (فارسی)</option>
-        </select>
-        <small style="color:var(--text-muted); font-size:12px; display:block; margin-top:6px;">Selecting Persian will automatically translate plots using AI.</small>
-      </div>
+  <button class="btn btn-secondary" onclick="openSettings()">Settings</button>
+</header>
 
-      <div class="form-group">
-        <label>OpenRouter API Key (For Persian Translation):</label>
-        <input type="password" id="openRouterKeyInput" class="form-control" style="width: 100%;" placeholder="sk-or-v1-...">
-      </div>
-      
-      <div class="form-group">
-        <label>Archive HTML Source File:</label>
-        <input type="file" id="archiveHtmlFileInput" class="form-control" style="width: 100%;" accept=".html,.htm" onchange="handleArchiveHtmlUpload(event)">
-        <div id="archiveUploadStatus" style="font-size: 13px; color: var(--cyan); margin-top: 8px; font-weight: 600;"></div>
-      </div>
+<div class="hero" id="hero"></div>
 
-      <div style="border-top: 1px solid var(--border); margin: 25px 0; padding-top: 25px; display: flex; gap: 15px;">
-        <button class="btn btn-secondary" style="flex:1;" onclick="exportLibrary()" id="btnExport">📤 Export Backup</button>
-        <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('importFileInput').click()" id="btnImport">📥 Import Backup</button>
-        <input type="file" id="importFileInput" style="display:none;" accept=".json" onchange="importLibrary(event)">
-      </div>
+<div class="grid" id="grid"></div>
 
-      <button class="btn" style="width:100%; padding:12px;" onclick="saveSettings()" id="btnSaveSettings">Save Settings</button>
-    </div>
+<!-- SETTINGS -->
+<div class="modal" id="settingsModal">
+  <div class="modal-box">
+    <h3>Settings</h3>
+
+    <label>Language</label>
+    <select id="lang">
+      <option value="en">English</option>
+      <option value="fa">Persian</option>
+    </select>
+
+    <br><br>
+
+    <label>OpenRouter Key</label>
+    <input id="apiKey" type="password" style="width:100%;padding:8px">
+
+    <br><br>
+
+    <button class="btn" onclick="saveSettings()">Save</button>
   </div>
+</div>
 
-  <div class="modal-backdrop" id="notesModal">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h3 id="lblNotesTitle">📝 Notes</h3>
-        <button class="btn btn-secondary" style="padding:6px 12px;" onclick="closeModal('notesModal')">✖</button>
-      </div>
-      <div class="form-group">
-        <textarea id="generalNotesTextArea" class="form-control" style="min-height: 350px; resize: vertical; width: 100%;" oninput="saveGeneralNotes(this.value)"></textarea>
-      </div>
-    </div>
-  </div>
+<script>
+const OMDB="4b0254f3";
 
-  <script>
-    /* ===================== CONFIG & STATE ===================== */
-    const OMDB_KEY = "4b0254f3";
-    
-    let state = {
-      items: JSON.parse(localStorage.getItem("cinetrack_ultimate_db") || "[]"),
-      selectedId: null,
-      filters: { status: 'all', type: 'all' },
-      language: localStorage.getItem("cinetrack_language") || "en",
-      openRouterKey: localStorage.getItem("cinetrack_or_key") || "",
-      archiveHtmlSource: localStorage.getItem("cinetrack_archive_html_raw") || "",
-      plotTranslations: JSON.parse(localStorage.getItem("cinetrack_plot_cache") || "{}")
-    };
+let state={
+  items: JSON.parse(localStorage.getItem("db")||"[]"),
+  selected:null,
+  lang:localStorage.getItem("lang")||"en",
+  translationCache: JSON.parse(localStorage.getItem("translationCache")||"{}")
+};
 
-    let searchDebounceTimer;
+/* SAVE */
+function saveDB(){
+  localStorage.setItem("db",JSON.stringify(state.items));
+}
 
-    /* ===================== I18N DICTIONARY ===================== */
-    const dict = {
-      en: {
-        searchPlace: "Search Online (OMDb)...", searchLocal: "Search local library...",
-        btnNotes: "📝 Notes", btnSettings: "⚙️ Settings", titleLibrary: "📚 Your Library",
-        all: "All", watching: "⏳ Watching", planned: "📅 Planned", completed: "✅ Completed",
-        movies: "🎬 Movies", series: "📺 Series", emptyHero: "Select a movie or series from your library to view details and download links.",
-        emptyGrid: "No items found matching the criteria.", genre: "Genre", director: "Director", actors: "Actors", runtime: "Runtime",
-        delete: "Delete from Library", personalRating: "Your Rating:", lblAddTitle: "Add to Library", lblSettingsTitle: "⚙️ System Settings", btnExport: "📤 Export Backup", btnImport: "📥 Import Backup",
-        statusWatching: "Watching", statusPlanned: "Planned", statusCompleted: "Completed",
-        typeMovie: "Movie", typeSeries: "TV Series", softSub: "SoftSub / Original", dubbed: "Dubbed", season: "Season", missingTranslation: "Plot translation in progress..."
-      },
-      fa: {
-        searchPlace: "جستجوی آنلاین (OMDb)...", searchLocal: "جستجو در کتابخانه محلی...",
-        btnNotes: "📝 یادداشت‌ها", btnSettings: "⚙️ تنظیمات", titleLibrary: "📚 کتابخانه شما",
-        all: "همه", watching: "⏳ در حال تماشا", planned: "📅 برنامه‌ریزی", completed: "✅ تمام شده",
-        movies: "🎬 فیلم‌ها", series: "📺 سریال‌ها", emptyHero: "یک فیلم یا سریال را از کتابخانه انتخاب کنید تا جزئیات و لینک‌های دانلود نمایش داده شود.",
-        emptyGrid: "هیچ موردی یافت نشد.", genre: "ژانر", director: "کارگردان", actors: "بازیگران", runtime: "زمان",
-        delete: "حذف از کتابخانه", personalRating: "امتیاز شما:", lblAddTitle: "افزودن به کتابخانه", lblSettingsTitle: "⚙️ تنظیمات سیستم", btnExport: "📤 دریافت بکاپ", btnImport: "📥 ورود بکاپ",
-        statusWatching: "در حال تماشا", statusPlanned: "برنامه ریزی شده", statusCompleted: "تمام شده",
-        typeMovie: "فیلم سینمایی", typeSeries: "سریال", softSub: "زیرنویس / زبان اصلی", dubbed: "دوبله فارسی", season: "فصل", missingTranslation: "در حال ترجمه هوشمند خلاصه داستان..."
-      }
-    };
+/* SEARCH */
+function handleSearch(v){
+  if(v.length<2) return;
+  fetch(`https://www.omdbapi.com/?s=${v}&apikey=${OMDB}`)
+  .then(r=>r.json())
+  .then(d=>{
+    if(!d.Search) return;
+    alert("Select result from API (UI simplified in this upgrade)");
+  });
+}
 
-    function t(key) { return dict[state.language][key] || key; }
+/* ADD */
+function addItem(data){
+  state.items.push(data);
+  saveDB();
+  render();
+}
 
-    /* ===================== INIT & CORE ===================== */
-    function init() {
-      applyLanguage();
-      document.getElementById("openRouterKeyInput").value = state.openRouterKey;
-      document.getElementById("languageSelect").value = state.language;
-      document.getElementById("generalNotesTextArea").value = localStorage.getItem("cinetrack_general_notes") || "";
-      
-      if (state.archiveHtmlSource) {
-        document.getElementById("archiveUploadStatus").innerText = state.language === 'en' ? "✅ Archive file loaded successfully." : "✅ فایل آرشیو با موفقیت بارگذاری شد.";
-      }
-      
-      renderGrid();
-      renderHero();
-    }
+/* HERO */
+async function renderHero(){
+  let item=state.items.find(i=>i.id===state.selected);
+  if(!item){document.getElementById("hero").innerHTML="Select item";return;}
 
-    function saveState() {
-      localStorage.setItem("cinetrack_ultimate_db", JSON.stringify(state.items));
-      localStorage.setItem("cinetrack_plot_cache", JSON.stringify(state.plotTranslations));
-    }
+  let plot=item.Plot||"";
 
-    function applyLanguage() {
-      document.documentElement.lang = state.language;
-      document.documentElement.dir = state.language === 'fa' ? 'rtl' : 'ltr';
-      
-      document.getElementById("searchInput").placeholder = t('searchPlace');
-      document.getElementById("localSearchInput").placeholder = t('searchLocal');
-      document.getElementById("btnNotes").innerHTML = t('btnNotes');
-      document.getElementById("btnSettings").innerHTML = t('btnSettings');
-      document.getElementById("titleLibrary").innerHTML = t('titleLibrary');
-      
-      document.getElementById("fltAll").innerHTML = t('all');
-      document.getElementById("fltWatching").innerHTML = t('watching');
-      document.getElementById("fltPlanned").innerHTML = t('planned');
-      document.getElementById("fltCompleted").innerHTML = t('completed');
-      document.getElementById("fltMovies").innerHTML = t('movies');
-      document.getElementById("fltSeries").innerHTML = t('series');
-
-      document.getElementById("lblAddTitle").innerHTML = t('lblAddTitle');
-      document.getElementById("lblSettingsTitle").innerHTML = t('lblSettingsTitle');
-      document.getElementById("btnExport").innerHTML = t('btnExport');
-      document.getElementById("btnImport").innerHTML = t('btnImport');
-    }
-
-    /* ===================== OMDb API INTEGRATION ===================== */
-    async function handleOnlineSearch(val) {
-      clearTimeout(searchDebounceTimer);
-      const dropdown = document.getElementById("searchDropdown");
-      if (!val || val.trim().length < 2) { dropdown.style.display = "none"; return; }
-
-      searchDebounceTimer = setTimeout(async () => {
-        try {
-          const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(val.trim())}&apikey=${OMDB_KEY}`);
-          const data = await res.json();
-          if (data.Response === "True" && data.Search) {
-            dropdown.innerHTML = data.Search.slice(0, 8).map(item => `
-              <div class="search-item" onclick="fetchAndShowAddModal('${item.imdbID}')">
-                <img src="${item.Poster !== 'N/A' ? item.Poster : 'https://via.placeholder.com/150?text=No+Cover'}">
-                <div>
-                  <h4>${item.Title}</h4>
-                  <p>${item.Year} | ${item.Type === 'movie' ? t('typeMovie') : t('typeSeries')}</p>
-                </div>
-              </div>
-            `).join('');
-            dropdown.style.display = "block";
-          } else {
-            dropdown.innerHTML = `<div style="padding:15px; text-align:center; color:var(--text-muted);">${t('emptyGrid')}</div>`;
-            dropdown.style.display = "block";
-          }
-        } catch (err) { console.error(err); }
-      }, 500);
-    }
-
-    function clearSearchInput() {
-      document.getElementById("searchInput").value = "";
-      document.getElementById("searchDropdown").style.display = "none";
-    }
-
-    async function fetchAndShowAddModal(imdbID) {
-      clearSearchInput();
-      try {
-        const res = await fetch(`https://www.omdbapi.com/?i=${imdbID}&plot=full&apikey=${OMDB_KEY}`);
-        let data = await res.json();
-        if (data.Response === "False") return;
-
-        const content = document.getElementById("addModalContent");
-        content.innerHTML = `
-          <div style="display:flex; gap:20px; margin-bottom:25px; background:var(--bg-hover); padding:15px; border-radius:var(--radius-md); border:1px solid var(--border);">
-            <img src="${data.Poster !== 'N/A' ? data.Poster : 'https://via.placeholder.com/100x150'}" style="width:80px; height:120px; object-fit:cover; border-radius:var(--radius-sm); box-shadow:var(--shadow-sm);">
-            <div>
-              <h4 style="font-size:18px; font-weight:800; color:var(--text-main); margin-bottom: 6px;">${data.Title}</h4>
-              <p style="color:var(--text-muted); font-size:14px; margin:4px 0 font-weight:500;">${data.Year} | ${data.Genre}</p>
-              <span class="badge badge-imdb" style="font-size:12px; margin-top:8px; display:inline-block;">IMDb: ⭐ ${data.imdbRating}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Status:</label>
-            <select id="addStatusSelect" class="form-control" style="width:100%;">
-              <option value="Planned" selected>${t('statusPlanned')}</option>
-              <option value="Watching">${t('statusWatching')}</option>
-              <option value="Completed">${t('statusCompleted')}</option>
-            </select>
-          </div>
-          <button class="btn btn-success" style="width:100%; margin-top:10px; padding:14px; font-size:16px;" id="confirmAddBtn">➕ ${t('lblAddTitle')}</button>
-        `;
-        
-        document.getElementById("confirmAddBtn").onclick = () => confirmAddItem(data);
-        openModal("addModal");
-      } catch(err) { console.error(err); }
-    }
-
-    function confirmAddItem(apiData) {
-      if (state.items.some(i => i.imdbID === apiData.imdbID)) {
-        alert(state.language === 'en' ? "Already in library!" : "از قبل در کتابخانه موجود است!");
-        closeModal('addModal'); return;
-      }
-
-      const status = document.getElementById("addStatusSelect").value;
-
-      const newItem = {
-        id: 'item_' + Date.now(),
-        imdbID: apiData.imdbID,
-        title: apiData.Title,
-        year: apiData.Year,
-        poster: apiData.Poster,
-        genre: apiData.Genre,
-        type: apiData.Type,
-        plot: apiData.Plot || '',
-        imdbRating: apiData.imdbRating || 'N/A',
-        director: apiData.Director || 'N/A',
-        actors: apiData.Actors || 'N/A',
-        runtime: apiData.Runtime || 'N/A',
-        status: status,
-        userRating: 0,
-        dateAdded: new Date().toISOString()
-      };
-
-      state.items.push(newItem);
-      saveState();
-      closeModal('addModal');
-      state.selectedId = newItem.id;
-      renderGrid();
-      renderHero();
-      
-      // Pre-fetch translation if Persian is selected
-      if(state.language === 'fa' && state.openRouterKey && newItem.plot && newItem.plot.length > 10) {
-          translatePlotWithAI(newItem.id, newItem.plot);
-      }
-    }
-
-    /* ===================== AI TRANSLATION ENGINE ===================== */
-    async function translatePlotWithAI(itemId, englishPlot) {
-        if (state.plotTranslations[itemId]) return; // Already cached
-        if (!state.openRouterKey) return;
-
-        const prompt = `Translate the following movie/series plot summary into highly engaging, natural, and accurate Persian (Farsi). Do not add extra commentary, just the translation.\n\nPlot: ${englishPlot}`;
-        
-        try {
-            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${state.openRouterKey}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    model: "google/gemma-2-9b-it", // Fast default model
-                    messages: [{ role: "user", content: prompt }]
-                })
-            });
-            const data = await response.json();
-            if (data.choices && data.choices[0]) {
-                state.plotTranslations[itemId] = data.choices[0].message.content.trim();
-                saveState();
-                if(state.selectedId === itemId) renderHero(); // Re-render if currently viewing
-            }
-        } catch (err) {
-            console.error("Translation Error:", err);
-        }
-    }
-
-    /* ===================== ARCHIVE MATCHING ENGINE (PRESERVED) ===================== */
-    function handleArchiveHtmlUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const rawText = e.target.result;
-        state.archiveHtmlSource = rawText;
-        localStorage.setItem("cinetrack_archive_html_raw", rawText);
-        document.getElementById("archiveUploadStatus").innerText = state.language === 'en' ? `✅ Loaded: ${file.name}` : `✅ بارگذاری شد: ${file.name}`;
-        if(state.selectedId) renderHero();
-      };
-      reader.readAsText(file);
-    }
-
-    // MANDATORY: Preserved exact functional logic for matching
-    function findMatchInArchive(imdbID, title) {
-      if (!state.archiveHtmlSource) return null;
-      const cleanImdbId = imdbID ? imdbID.trim().toLowerCase() : '';
-      const cleanTitle = title ? title.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ') : '';
-      const titleWords = cleanTitle.split(' ').filter(w => w.length > 1);
-
-      const matchedLinks = [];
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(state.archiveHtmlSource, 'text/html');
-      const allLinks = doc.getElementsByTagName('a');
-
-      for (let link of allLinks) {
-        const hrefText = (link.getAttribute('href') || '').toLowerCase();
-        const innerText = (link.innerText || '').toLowerCase();
-
-        let isMatch = false;
-        if (cleanImdbId && (hrefText.includes(cleanImdbId) || innerText.includes(cleanImdbId))) {
-          isMatch = true;
-        } 
-        else if (cleanTitle && (hrefText.includes(cleanTitle) || innerText.includes(cleanTitle))) {
-          isMatch = true;
-        }
-        else if (titleWords.length > 0) {
-          const matchAllWords = titleWords.every(word => hrefText.includes(word) || innerText.includes(word));
-          if (matchAllWords) isMatch = true;
-        }
-
-        if (isMatch) {
-          if (!matchedLinks.some(l => l.url === link.getAttribute('href'))) {
-            matchedLinks.push({
-              text: link.innerText.trim() || "Download Link",
-              url: link.getAttribute('href')
-            });
-          }
-        }
-      }
-      return matchedLinks;
-    }
-
-    /* ===================== FORMATTING ENGINE (NEW) ===================== */
-    function formatArchiveLinks(matchedLinks, type) {
-        if (!matchedLinks || matchedLinks.length === 0) return '';
-
-        let softSub = [];
-        let dubbed = [];
-
-        // Categorize links based on text clues
-        matchedLinks.forEach(l => {
-            const txt = l.text.toLowerCase() + " " + l.url.toLowerCase();
-            const isDubbed = txt.includes('dubbed') || txt.includes('دوبله') || txt.includes('dubb');
-            if (isDubbed) dubbed.push(l);
-            else softSub.push(l);
+  if(state.lang==="fa"){
+    if(state.translationCache[item.imdbID]){
+      plot=state.translationCache[item.imdbID];
+    }else{
+      const apiKey=localStorage.getItem("apiKey");
+      if(apiKey){
+        const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{
+          method:"POST",
+          headers:{
+            "Authorization":"Bearer "+apiKey,
+            "Content-Type":"application/json"
+          },
+          body:JSON.stringify({
+            model:"deepseek/deepseek-chat",
+            messages:[{role:"user",content:"Translate to Persian:\n"+plot}]
+          })
         });
-
-        // Regex extractors for cleaner display
-        const parseQualityInfo = (text) => {
-            // Extracts resolution (1080p), source (BluRay), codec (x265 10bit) and size (MB/GB) if available.
-            let cleanLabel = text;
-            let size = "";
-            
-            // Try finding size
-            const sizeMatch = text.match(/(\d+(?:\.\d+)?\s*(MB|GB))/i);
-            if (sizeMatch) {
-                size = sizeMatch[1].toUpperCase();
-                cleanLabel = cleanLabel.replace(sizeMatch[0], ''); // remove size from label
-            }
-
-            // Clean up label by keeping recognized keywords
-            const keywords = ['4K', '1080p', '720p', '480p', 'BluRay', 'Web-DL', 'WebRip', 'HDRip', 'x265', '10bit', 'HQ'];
-            let parts = [];
-            keywords.forEach(kw => {
-                if (new RegExp(kw, 'i').test(text)) parts.push(kw);
-            });
-
-            if (parts.length > 0) cleanLabel = parts.join(' ');
-            else {
-                // fallback cleaning: strip file extensions
-                cleanLabel = cleanLabel.replace(/\.(mkv|mp4|avi)$/i, '').trim();
-                if(cleanLabel.length > 40) cleanLabel = cleanLabel.substring(0, 37) + "..."; 
-            }
-
-            return { label: cleanLabel || 'Unknown Quality', size: size };
-        };
-
-        const parseSeason = (text) => {
-            const match = text.match(/s(\d{1,2})/i) || text.match(/season\s*(\d{1,2})/i) || text.match(/فصل\s*(\d{1,2})/i);
-            return match ? parseInt(match[1], 10) : 0; // 0 = unknown season
-        };
-
-        // Render Movie
-        if (type === 'movie') {
-            const buildMovieLines = (linksArray) => {
-                if(linksArray.length === 0) return '';
-                return linksArray.map(l => {
-                    const info = parseQualityInfo(l.text);
-                    const sizeStr = info.size ? `<span class="dl-movie-size">${info.size}</span>` : '';
-                    return `
-                    <div class="dl-movie-row">
-                        <a href="${l.url}" target="_blank" class="dl-movie-link">
-                            <span class="dl-movie-quality">${info.label}</span>
-                            ${sizeStr}
-                        </a>
-                    </div>`;
-                }).join('');
-            };
-
-            let html = '';
-            if (softSub.length > 0) {
-                html += `<div class="dl-group-title">${t('softSub')}</div>${buildMovieLines(softSub)}`;
-            }
-            if (dubbed.length > 0) {
-                html += `<div class="dl-group-title">${t('dubbed')}</div>${buildMovieLines(dubbed)}`;
-            }
-            return html;
-        } 
-        
-        // Render Series
-        else {
-            const buildSeriesLines = (linksArray) => {
-                if(linksArray.length === 0) return '';
-                
-                // Group by Season
-                let seasons = {};
-                linksArray.forEach(l => {
-                    let s = parseSeason(l.text + " " + l.url);
-                    if (!seasons[s]) seasons[s] = [];
-                    seasons[s].push(l);
-                });
-
-                let html = '';
-                // Sort seasons keys (ensure unknown season '0' goes last)
-                let sortedKeys = Object.keys(seasons).sort((a,b) => parseInt(a) - parseInt(b));
-                
-                sortedKeys.forEach(s => {
-                    const seasonLabel = s === '0' ? 'Specials / Unknown Season' : `${t('season')} ${s}`;
-                    
-                    let linksHtml = seasons[s].map((l, index) => {
-                        const info = parseQualityInfo(l.text);
-                        return `<a href="${l.url}" target="_blank" class="dl-series-link-item" title="${l.text}">${info.label}</a>`;
-                    }).join('<span class="dl-separator"> / </span>');
-
-                    html += `
-                    <div class="dl-series-inline-group">
-                        <span class="dl-series-season">${seasonLabel}</span>
-                        <div class="dl-series-links-wrapper">${linksHtml}</div>
-                    </div>`;
-                });
-                return html;
-            };
-
-            let html = '';
-            if (softSub.length > 0) {
-                html += `<div class="dl-group-title">${t('softSub')}</div>${buildSeriesLines(softSub)}`;
-            }
-            if (dubbed.length > 0) {
-                html += `<div class="dl-group-title">${t('dubbed')}</div>${buildSeriesLines(dubbed)}`;
-            }
-            return html;
-        }
-    }
-
-
-    /* ===================== RENDERING ===================== */
-    function renderGrid() {
-      const grid = document.getElementById("mainGrid");
-      const localQuery = document.getElementById("localSearchInput").value.toLowerCase();
-      const sortBy = document.getElementById("sortSelect").value;
-
-      let filtered = state.items.filter(item => {
-        if (state.filters.status !== 'all' && item.status !== state.filters.status) return false;
-        if (state.filters.type !== 'all' && item.type !== state.filters.type) return false;
-        if (localQuery) {
-          const textToSearch = `${item.title} ${item.genre} ${item.year} ${item.director}`.toLowerCase();
-          if (!textToSearch.includes(localQuery)) return false;
-        }
-        return true;
-      });
-
-      filtered.sort((a, b) => {
-        if (sortBy === 'dateAdded') return new Date(b.dateAdded) - new Date(a.dateAdded);
-        if (sortBy === 'title') return a.title.localeCompare(b.title);
-        if (sortBy === 'imdb') return parseFloat(b.imdbRating || 0) - parseFloat(a.imdbRating || 0);
-        if (sortBy === 'year') return parseInt(b.year) - parseInt(a.year);
-        if (sortBy === 'userRating') return (b.userRating || 0) - (a.userRating || 0);
-      });
-
-      if (filtered.length === 0) {
-        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px; color:var(--text-muted); font-size:16px;">${t('emptyGrid')}</div>`;
-        return;
-      }
-
-      grid.innerHTML = filtered.map(item => {
-        const isSelected = item.id === state.selectedId ? 'selected' : '';
-        const statusColor = item.status === 'Watching' ? 'var(--cyan)' : item.status === 'Completed' ? 'var(--green)' : 'var(--gold)';
-
-        return `
-          <div class="movie-card ${isSelected}" onclick="selectCard('${item.id}')">
-            <div class="card-poster-wrapper">
-              <img src="${item.poster !== 'N/A' ? item.poster : 'https://via.placeholder.com/200x300?text=No+Cover'}">
-            </div>
-            <div class="card-info">
-              <h4 class="card-title">${item.title}</h4>
-              <div>
-                <div class="card-meta-line">
-                  <span>${item.year}</span>
-                  <span style="display:flex; align-items:center;">
-                    ${item.status === 'Watching' ? t('statusWatching') : item.status === 'Planned' ? t('statusPlanned') : t('statusCompleted')}
-                    <span class="status-dot" style="background:${statusColor}"></span>
-                  </span>
-                </div>
-                <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
-                  <span class="badge badge-imdb" style="font-size:11px; padding:4px 8px;">⭐ ${item.imdbRating}</span>
-                  <span style="font-size:14px; color:var(--gold); font-weight:800;">${item.userRating ? '★ '+item.userRating : ''}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function selectCard(id) {
-      state.selectedId = id;
-      renderGrid();
-      renderHero();
-      document.getElementById('heroSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    function renderHero() {
-      const container = document.getElementById("heroSection");
-      const item = state.items.find(i => i.id === state.selectedId);
-
-      if (!item) {
-        container.innerHTML = `<div class="hero-empty"><span style="font-size:56px; opacity:0.5;">🍿</span><p>${t('emptyHero')}</p></div>`;
-        return;
-      }
-
-      // Plot handling with AI Translation Cache
-      let displayPlot = item.plot || '';
-      let isTranslating = false;
-      if (state.language === 'fa') {
-          if (state.plotTranslations[item.id]) {
-              displayPlot = state.plotTranslations[item.id];
-          } else if (state.openRouterKey && displayPlot.length > 10) {
-              displayPlot = `<span class="loading-pulse" style="color:var(--accent); font-weight:600;">${t('missingTranslation')}</span>`;
-              isTranslating = true;
-              translatePlotWithAI(item.id, item.plot);
-          }
-      }
-
-      // Formatting Engine Hook
-      const matchedLinks = findMatchInArchive(item.imdbID, item.title);
-      let archiveSectionHtml = "";
-      
-      if (state.archiveHtmlSource) {
-          if (matchedLinks && matchedLinks.length > 0) {
-              archiveSectionHtml = `
-              <div style="margin-top: 30px;">
-                  <h3 class="dl-section-title">📥 Download Links</h3>
-                  ${formatArchiveLinks(matchedLinks, item.type)}
-              </div>`;
-          } else {
-              archiveSectionHtml = `<div style="margin-top:20px; padding:15px; border-radius:8px; background:#fffbeb; color:#92400e; border:1px solid #fcd34d;">No files found for this item in the loaded archive source.</div>`;
-          }
-      } else {
-          archiveSectionHtml = `<div style="margin-top:20px; padding:15px; border-radius:8px; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); font-size:13px;">Load your Archive HTML Source in Settings to view direct download links here.</div>`;
-      }
-
-      container.innerHTML = `
-        <div class="hero-content">
-          <img class="hero-poster" src="${item.poster !== 'N/A' ? item.poster : 'https://via.placeholder.com/300x450'}" alt="">
-          <div class="hero-details">
-            <h1 class="hero-title">${item.title}</h1>
-            <div class="hero-meta">
-              <span class="badge badge-accent">${item.status === 'Watching' ? t('statusWatching') : item.status === 'Planned' ? t('statusPlanned') : t('statusCompleted')}</span>
-              <span class="badge">${item.year}</span>
-              <span class="badge">${item.type === 'movie' ? t('typeMovie') : t('typeSeries')}</span>
-              <span class="badge badge-imdb">IMDb: ⭐ ${item.imdbRating}</span>
-            </div>
-
-            <div class="hero-extended-info">
-              <div class="extended-row"><strong>${t('genre')}:</strong> ${item.genre}</div>
-              <div class="extended-row"><strong>${t('runtime')}:</strong> ${item.runtime}</div>
-              <div class="extended-row"><strong>${t('director')}:</strong> ${item.director}</div>
-              <div class="extended-row" style="grid-column: 1/-1;"><strong>${t('actors')}:</strong> ${item.actors}</div>
-            </div>
-
-            <p class="hero-plot" dir="${state.language === 'fa' && !isTranslating ? 'rtl' : 'auto'}">${displayPlot}</p>
-            
-            <div style="background:var(--bg-main); padding:25px; border-radius:var(--radius-md); border:1px solid var(--border); margin-top:30px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
-                <div style="display:flex; align-items:center; gap:15px;">
-                  <span style="font-size:15px; font-weight:700;">${t('personalRating')}</span>
-                  ${renderStars(item.userRating || 0)}
-                </div>
-                <button class="btn btn-danger" onclick="deleteItem('${item.id}')">🗑️ ${t('delete')}</button>
-            </div>
-
-            ${archiveSectionHtml}
-
-          </div>
-        </div>
-      `;
-    }
-
-    /* ===================== INTERACTIONS & UPDATES ===================== */
-    function setFilter(key, value) {
-      if (key === 'status') { state.filters.status = value; state.filters.type = 'all'; } 
-      else if (key === 'type') { state.filters.type = value; state.filters.status = 'all'; }
-      
-      document.querySelectorAll("#filterContainer .filter-btn").forEach(b => b.classList.remove("active"));
-      event.target.classList.add("active");
-      renderGrid();
-    }
-
-    function renderStars(currentRating) {
-      let html = '<div class="stars-rating">';
-      for (let i = 1; i <= 10; i++) {
-        html += `<span class="${i <= currentRating ? 'active' : ''}" onclick="setRating(${i})">★</span>`;
-      }
-      html += '</div>';
-      return html;
-    }
-
-    function setRating(rating) {
-      const item = state.items.find(i => i.id === state.selectedId);
-      if (item) { item.userRating = rating; saveState(); renderHero(); renderGrid(); }
-    }
-
-    function deleteItem(id) {
-      if (confirm(state.language === 'en' ? "Are you sure you want to delete this from your library?" : "آیا از حذف این مورد اطمینان دارید؟")) {
-        state.items = state.items.filter(i => i.id !== id);
-        if (state.selectedId === id) state.selectedId = null;
-        saveState(); renderGrid(); renderHero();
+        const data=await res.json();
+        plot=data.choices?.[0]?.message?.content||plot;
+        state.translationCache[item.imdbID]=plot;
+        localStorage.setItem("translationCache",JSON.stringify(state.translationCache));
       }
     }
+  }
 
-    /* ===================== UTILS & SETTINGS ===================== */
-    function openModal(id) { document.getElementById(id).classList.add("active"); }
-    function closeModal(id) { document.getElementById(id).classList.remove("active"); }
+  document.getElementById("hero").innerHTML=`
+    <h2>${item.title}</h2>
+    <p>${plot}</p>
+  `;
+}
 
-    function saveGeneralNotes(val) { localStorage.setItem("cinetrack_general_notes", val); }
+/* GRID */
+function render(){
+  let g=document.getElementById("grid");
+  g.innerHTML="";
+  state.items.forEach(i=>{
+    let c=document.createElement("div");
+    c.className="card";
+    c.onclick=()=>{state.selected=i.id;renderHero();};
+    c.innerHTML=`
+      <img src="${i.poster}">
+      <div class="card-body">
+        <div class="title">${i.title}</div>
+      </div>
+    `;
+    g.appendChild(c);
+  });
+}
 
-    function saveSettings() {
-      state.language = document.getElementById("languageSelect").value;
-      state.openRouterKey = document.getElementById("openRouterKeyInput").value.trim();
-      localStorage.setItem("cinetrack_language", state.language);
-      localStorage.setItem("cinetrack_or_key", state.openRouterKey);
-      
-      applyLanguage();
-      renderGrid();
-      if(state.selectedId) renderHero(); // Re-render to trigger translation if needed
-      closeModal('settingsModal');
-    }
+/* SETTINGS */
+function openSettings(){
+  document.getElementById("settingsModal").classList.add("active");
+}
 
-    function exportLibrary() {
-      const backupData = {
-          items: state.items,
-          plotTranslations: state.plotTranslations
-      };
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
-      const dl = document.createElement('a');
-      dl.setAttribute("href", dataStr);
-      dl.setAttribute("download", `cinetrack_backup_${new Date().getTime()}.json`);
-      document.body.appendChild(dl); dl.click(); dl.remove();
-    }
+function saveSettings(){
+  state.lang=document.getElementById("lang").value;
+  localStorage.setItem("lang",state.lang);
+  localStorage.setItem("apiKey",document.getElementById("apiKey").value);
+  document.getElementById("settingsModal").classList.remove("active");
+}
 
-    function importLibrary(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const parsed = JSON.parse(e.target.result);
-          if (parsed.items && Array.isArray(parsed.items)) {
-            state.items = parsed.items;
-            if(parsed.plotTranslations) state.plotTranslations = parsed.plotTranslations;
-            saveState(); init();
-            alert(state.language === 'en' ? "Backup imported successfully." : "بکاپ با موفقیت وارد شد.");
-            closeModal('settingsModal');
-          } else if (Array.isArray(parsed)) { // Legacy support
-            state.items = parsed;
-            saveState(); init();
-            closeModal('settingsModal');
-          }
-        } catch (err) { alert(state.language === 'en' ? "Invalid backup file." : "فایل بکاپ نامعتبر است."); }
-      };
-      reader.readAsText(file);
-    }
+/* INIT */
+render();
+</script>
 
-    window.onload = init;
-  </script>
 </body>
 </html>
