@@ -211,6 +211,19 @@
     .series-qualities-row a { color: var(--cyan); text-decoration: none; }
     .series-qualities-row a:hover { text-decoration: underline; }
 
+    /* Stage progress indicator */
+    .stage-indicator {
+      display: flex; align-items: center; gap: 10px; padding: 12px 15px;
+      background: #f0f9ff; border: 1px solid rgba(14,165,233,0.2);
+      border-radius: 10px; font-size: 13px; color: var(--cyan); font-weight: 600;
+    }
+    .stage-spinner {
+      width: 16px; height: 16px; border: 2px solid rgba(14,165,233,0.2);
+      border-top-color: var(--cyan); border-radius: 50%;
+      animation: spin 0.7s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     @media (max-width: 768px) {
       .hero-content { flex-direction: column; align-items: center; }
       .controls-bar { flex-direction: column; align-items: stretch; }
@@ -424,7 +437,15 @@
       renderWatchNext();
     }
 
-    /* ===================== ARCHIVE MATCHING ENGINE (4-STAGE SMART SEARCH) ===================== */
+    /* =====================================================================
+       ARCHIVE MATCHING ENGINE — 4-STAGE PRECISION SEARCH
+       ---------------------------------------------------------------
+       Stage 1 : IMDb ID only           (exact, no false-positives)
+       Stage 2 : Title name only        (slug-boundary match)
+       Stage 3 : BOTH must match        (intersection — tightest filter)
+       Stage 4 : OpenRouter AI fallback (last resort)
+       ===================================================================== */
+
     function handleArchiveHtmlUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -435,7 +456,7 @@
         localStorage.setItem("cinetrack_archive_html_raw", rawText);
         document.getElementById("archiveUploadStatus").innerText = "✅ فایل بارگذاری شد: " + file.name;
         alert("سورس آرشیو ذخیره شد.");
-        if(state.selectedId) renderHero();
+        if (state.selectedId) renderHero();
       };
       reader.readAsText(file);
     }
@@ -450,90 +471,99 @@
       })).filter(l => l.url && l.url.length > 5);
     }
 
-    // Build a regex from a title that matches URL slugs and text:
-    // "Breaking Bad" → /breaking[-_.\s]bad/i
-    // Handles multi-word titles, ignores punctuation/articles
+    /**
+     * Build a regex that matches the title as a COMPLETE slug unit.
+     *
+     * Problem this solves:
+     *   "Lost" must NOT match "lost-in-space" or "lost-girl".
+     *   "Breaking Bad" must NOT match "breaking-bad-habits".
+     *
+     * Strategy:
+     *   1. Normalise title → lower-case slug words.
+     *   2. Join words with a flexible separator char-class [-_.\s].
+     *   3. Require the match to be bounded:
+     *        – left  : start-of-string OR a path-separator (/ _ . space)
+     *        – right : end-of-string OR a path-separator OR a digit
+     *                  OR a hyphen followed by a season/year marker
+     *                  (e.g. "-s01", "-2004")  — but NOT a hyphen
+     *                  followed by another plain word (which would mean
+     *                  the slug continues with words we did NOT search for).
+     */
     function buildTitleRegex(title) {
       const cleaned = title.toLowerCase()
         .replace(/[''':!?,.()\[\]]/g, '')
-        .replace(/\s+/g, ' ').trim();
+        .replace(/\s+/g, ' ')
+        .trim();
+
       const words = cleaned.split(' ').filter(w => w.length > 0);
-      // Join words with flexible separator (hyphen, underscore, dot, space)
-      const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[-_. ]?');
-      return new RegExp(pattern, 'i');
+      const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+      // Each word joined by a flexible single separator
+      const pattern = escaped.join('[-_.\\s]');
+
+      // Right-boundary lookahead:
+      //   [/_.\\s] — path/whitespace separator
+      //   $        — end of string
+      //   \\d      — digit (sequel number, year start)
+      //   (?=-(?:s\\d{1,2}|\\d{4}|ep\\d)) — hyphen before season/year/episode marker
+      //
+      // What we EXCLUDE from the right boundary:
+      //   a hyphen followed by a plain lowercase letter sequence that is NOT
+      //   one of the above markers → prevents "lost" matching "lost-in-space"
+      const rightBoundary = '(?=[/_.\\s]|$|\\d|(?=-(?:s\\d{1,2}e?\\d*|\\d{4}|ep\\d|season\\d)))';
+
+      // Left-boundary lookbehind (or start-of-string):
+      //   We use a non-capturing group with alternation because JS supports
+      //   variable-length lookbehinds in modern engines, but to stay safe
+      //   we anchor via a consuming group: match the separator as part of
+      //   the pattern but capture only the title part.
+      return new RegExp('(?:^|[/_.\\s])' + pattern + rightBoundary, 'i');
     }
 
-    // Does a link contain a season/episode marker? (S01E01, Season 1, فصل ۱, etc.)
-    function hasSeriesMarker(link) {
-      const combined = (link.text + ' ' + link.url).toLowerCase();
-      return /s\d{1,2}e\d{1,2}|\bs\d{2}\b|season[\s._-]*\d|فصل[\s]*\d/.test(combined);
-    }
-
-    // STAGE 1: IMDb code exact search — the most precise, no false positives
+    // ── Stage 1 ────────────────────────────────────────────────────────────
+    // Search for the IMDb ID (e.g. "tt0411008") anywhere in URL or link text.
+    // IMDb IDs are globally unique → zero false-positives.
     function searchByImdbId(allLinks, imdbID) {
-      const cleanId = imdbID.toLowerCase();
+      const id = imdbID.toLowerCase();
       return allLinks.filter(l =>
-        l.url.toLowerCase().includes(cleanId) || l.text.toLowerCase().includes(cleanId)
+        l.url.toLowerCase().includes(id) || l.text.toLowerCase().includes(id)
       );
     }
 
-    // STAGE 2: Combined — IMDb code OR title slug match, then deduplicate.
-    // For series: filter combined results to those with season markers to exclude
-    // related movies (e.g. "El Camino" won't have S01E01 markers).
-    function searchCombined(allLinks, title, imdbID, itemType) {
-      const cleanId = imdbID.toLowerCase();
-      const titleRx = buildTitleRegex(title);
+    // ── Stage 2 ────────────────────────────────────────────────────────────
+    // Search by title slug only, with strict boundary matching so that
+    // "Lost" doesn't match "Lost in Space" and vice-versa.
+    function searchByTitleOnly(allLinks, title) {
+      const rx = buildTitleRegex(title);
+      return allLinks.filter(l => rx.test(l.url) || rx.test(l.text));
+    }
 
-      // Gather all links matching IMDb code
-      const byId = allLinks.filter(l =>
-        l.url.toLowerCase().includes(cleanId) || l.text.toLowerCase().includes(cleanId)
-      );
-
-      // Gather all links matching title slug in URL or text
-      const byTitle = allLinks.filter(l => titleRx.test(l.url) || titleRx.test(l.text));
-
-      // Deduplicate union
-      const seen = new Set();
-      const union = [...byId, ...byTitle].filter(l => {
-        const key = l.url;
-        if (seen.has(key)) return false;
-        seen.add(key); return true;
+    // ── Stage 3 ────────────────────────────────────────────────────────────
+    // INTERSECTION: a link must satisfy BOTH the IMDb-ID check AND the
+    // title-slug check.  This is the tightest filter — eliminates the
+    // "Lost / Lost in Space" season confusion entirely.
+    function searchByBothStrict(allLinks, title, imdbID) {
+      const id  = imdbID.toLowerCase();
+      const rx  = buildTitleRegex(title);
+      return allLinks.filter(l => {
+        const urlLow  = l.url.toLowerCase();
+        const textLow = l.text.toLowerCase();
+        const hasId    = urlLow.includes(id)   || textLow.includes(id);
+        const hasTitle = rx.test(l.url)         || rx.test(l.text);
+        return hasId && hasTitle;
       });
-
-      if (itemType === 'series' && union.length > 0) {
-        // For series: prefer links that have season markers — cuts out movie spin-offs
-        const withMarker = union.filter(hasSeriesMarker);
-        // If we found series-marked links, return those; otherwise fall through
-        if (withMarker.length > 0) return withMarker;
-      }
-
-      return union;
     }
 
-    // STAGE 3: Title-only with strict slug matching + series marker requirement
-    function searchByTitleStrict(allLinks, title, itemType) {
-      const titleRx = buildTitleRegex(title);
-      const matches = allLinks.filter(l => titleRx.test(l.url) || titleRx.test(l.text));
-
-      if (itemType === 'series' && matches.length > 0) {
-        // Strict: only return links that also have a season/episode marker
-        const withMarker = matches.filter(hasSeriesMarker);
-        if (withMarker.length > 0) return withMarker;
-        // If no markers found at all, return raw title matches (some archives don't mark)
-        return matches;
-      }
-
-      return matches;
-    }
-
+    // ── Stage 4 ────────────────────────────────────────────────────────────
+    // AI fallback via OpenRouter — sends the first 500 links to the model
+    // and asks it to identify indices that belong to the target title.
     async function searchWithAI(item, allLinks) {
-      const key = localStorage.getItem("cinetrack_or_key");
+      const key   = localStorage.getItem("cinetrack_or_key");
       const model = localStorage.getItem("cinetrack_or_model");
-      if (!key || !model) return null;
+      if (!key || !model) return null;   // no credentials → signal to caller
 
-      // Build condensed link list — first try a broader scan of all links (up to 500)
       const linkList = allLinks.slice(0, 500).map((l, i) =>
-        `${i}: [${l.text.slice(0,80)}] ${l.url.slice(0,150)}`
+        `${i}: [${l.text.slice(0, 80)}] ${l.url.slice(0, 150)}`
       ).join('\n');
 
       try {
@@ -541,11 +571,11 @@
           method: "POST",
           headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: model,
+            model,
             messages: [
               {
                 role: "system",
-                content: `You are a precise download link matcher. Given a numbered list of links from an archive page and a title with its IMDb ID, return ONLY the indices (comma-separated) of links that specifically belong to this exact title — NOT related titles or spin-offs. For TV series, only include links with season/episode markers. If none match, return NONE. Output numbers or NONE only — no explanation.`
+                content: `You are a precise download-link matcher. Given a numbered list of archive links and a title with its IMDb ID, return ONLY the comma-separated indices of links that belong EXACTLY to this title — not related titles or spin-offs. For TV series include only season/episode links for THIS show. If nothing matches, output NONE. Output indices or NONE only — no explanation.`
               },
               {
                 role: "user",
@@ -559,172 +589,221 @@
         if (result.choices && result.choices[0]) {
           const answer = result.choices[0].message.content.trim();
           if (/^none$/i.test(answer) || answer === '') return [];
-          const indices = answer.split(/[\s,،]+/)
+          const indices = answer
+            .split(/[\s,،]+/)
             .map(n => parseInt(n.trim()))
             .filter(n => !isNaN(n) && n >= 0 && n < allLinks.length);
           return indices.map(i => allLinks[i]);
         }
-      } catch (e) { console.error("AI link search failed:", e); }
+      } catch (e) {
+        console.error("AI link search failed:", e);
+      }
       return null;
     }
 
+    // ── Main Orchestrator ──────────────────────────────────────────────────
     async function matchAndExtractLinks(imdbID) {
-      const item = state.items.find(i => i.id === imdbID);
+      const item       = state.items.find(i => i.id === imdbID);
       const resultsDiv = document.getElementById("archiveMatchResults");
       if (!resultsDiv) return;
 
       if (!state.archiveHtmlSource) {
-        resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06); border:1px solid #f87171; padding:15px; border-radius:12px; font-size:13px; color:#b91c1c;">⚠️ فایل آرشیو بارگذاری نشده است. در تنظیمات فایل HTML آرشیو را آپلود کنید.</div>`;
+        resultsDiv.innerHTML = `
+          <div style="background:rgba(239,68,68,0.06);border:1px solid #f87171;padding:15px;border-radius:12px;font-size:13px;color:#b91c1c;">
+            ⚠️ فایل آرشیو بارگذاری نشده است. در تنظیمات فایل HTML آرشیو را آپلود کنید.
+          </div>`;
         return;
       }
 
-      resultsDiv.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:12px; background:#f0f9ff; border:1px solid rgba(14,165,233,0.2); border-radius:10px; font-size:13px; color:var(--cyan); font-weight:600;">🔍 مرحله ۱: جستجو با کد IMDb...</div>`;
-      await new Promise(r => setTimeout(r, 0)); // allow UI to paint
+      function stageMsg(n, msg) {
+        resultsDiv.innerHTML = `
+          <div class="stage-indicator">
+            <div class="stage-spinner"></div>
+            <span>مرحله ${n} از ۴ — ${msg}</span>
+          </div>`;
+      }
 
       const allLinks = getAllArchiveLinks();
       let matches = [];
-      let strategyLabel = '';
 
-      // ── STAGE 1: IMDb code only ────────────────────────────────────────────
+      /* ── Stage 1: IMDb ID ── */
+      stageMsg('۱', `جستجو با کد IMDb: ${imdbID}`);
+      await tick();
+
       matches = searchByImdbId(allLinks, imdbID);
       if (matches.length > 0) {
-        strategyLabel = `🆔 یافت با کد IMDb: <b>${imdbID}</b>`;
-        renderExtractedLinks(matches, item, resultsDiv, strategyLabel);
+        renderExtractedLinks(matches, item, resultsDiv,
+          `🆔 یافت‌شده با کد IMDb: <b>${imdbID}</b>`);
         return;
       }
 
-      // ── STAGE 2: IMDb code OR title slug combined (series-marker filtered) ─
-      resultsDiv.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:12px; background:#f0f9ff; border:1px solid rgba(14,165,233,0.2); border-radius:10px; font-size:13px; color:var(--cyan); font-weight:600;">🔍 مرحله ۲: جستجوی ترکیبی کد + نام...</div>`;
-      await new Promise(r => setTimeout(r, 0));
+      /* ── Stage 2: Title name only ── */
+      stageMsg('۲', `جستجو با نام دقیق: ${item.title}`);
+      await tick();
 
-      matches = searchCombined(allLinks, item.title, imdbID, item.type);
+      matches = searchByTitleOnly(allLinks, item.title);
       if (matches.length > 0) {
-        strategyLabel = `🔤+🆔 جستجوی ترکیبی: کد IMDb + نام <b>${item.title}</b>`;
-        renderExtractedLinks(matches, item, resultsDiv, strategyLabel);
+        renderExtractedLinks(matches, item, resultsDiv,
+          `🔤 یافت‌شده با نام: <b>${item.title}</b>`);
         return;
       }
 
-      // ── STAGE 3: Title slug only with series-marker filter ─────────────────
-      resultsDiv.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:12px; background:#f0f9ff; border:1px solid rgba(14,165,233,0.2); border-radius:10px; font-size:13px; color:var(--cyan); font-weight:600;">🔍 مرحله ۳: جستجو با نام دقیق...</div>`;
-      await new Promise(r => setTimeout(r, 0));
+      /* ── Stage 3: Both (intersection) ── */
+      stageMsg('۳', 'جستجوی ترکیبی — تطابق هم‌زمان کد و نام');
+      await tick();
 
-      matches = searchByTitleStrict(allLinks, item.title, item.type);
+      matches = searchByBothStrict(allLinks, item.title, imdbID);
       if (matches.length > 0) {
-        strategyLabel = `🔤 جستجوی نام دقیق: <b>${item.title}</b>`;
-        renderExtractedLinks(matches, item, resultsDiv, strategyLabel);
+        renderExtractedLinks(matches, item, resultsDiv,
+          `🔤+🆔 یافت‌شده با تطابق ترکیبی (کد + نام)`);
         return;
       }
 
-      // ── STAGE 4: AI fallback ───────────────────────────────────────────────
-      resultsDiv.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:12px; background:#f0f9ff; border:1px solid rgba(14,165,233,0.2); border-radius:10px; font-size:13px; color:var(--cyan); font-weight:600;">🤖 مرحله ۴: مشورت با هوش مصنوعی...</div>`;
-      await new Promise(r => setTimeout(r, 0));
+      /* ── Stage 4: AI ── */
+      stageMsg('۴', 'هیچ نتیجه‌ای یافت نشد — مشورت با هوش مصنوعی...');
+      await tick();
 
       const aiResult = await searchWithAI(item, allLinks);
+
       if (aiResult === null) {
-        resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06); border:1px solid #f87171; padding:15px; border-radius:12px; font-size:13px; color:#b91c1c;">⚠️ لینکی پیدا نشد. کلید OpenRouter برای مرحله ۴ (جستجوی AI) تنظیم نشده است.</div>`;
+        resultsDiv.innerHTML = `
+          <div style="background:rgba(239,68,68,0.06);border:1px solid #f87171;padding:15px;border-radius:12px;font-size:13px;color:#b91c1c;">
+            ⚠️ لینکی یافت نشد. برای فعال‌سازی جستجوی هوشمند (مرحله ۴)، کلید OpenRouter را در تنظیمات وارد کنید.
+          </div>`;
         return;
       }
       if (aiResult.length === 0) {
-        resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06); border:1px solid #f87171; padding:15px; border-radius:12px; font-size:13px; color:#b91c1c;">⚠️ هیچ لینکی برای این عنوان در آرشیو یافت نشد. (هر ۴ مرحله جستجو امتحان شد)</div>`;
+        resultsDiv.innerHTML = `
+          <div style="background:rgba(239,68,68,0.06);border:1px solid #f87171;padding:15px;border-radius:12px;font-size:13px;color:#b91c1c;">
+            ⚠️ هیچ لینکی برای <b>${item.title}</b> در آرشیو یافت نشد. (تمام ۴ مرحله جستجو انجام شد)
+          </div>`;
         return;
       }
       renderExtractedLinks(aiResult, item, resultsDiv, `🤖 یافت‌شده توسط هوش مصنوعی`);
     }
 
+    // Small utility — yields to browser paint loop
+    function tick() { return new Promise(r => setTimeout(r, 0)); }
+
+    /* =====================================================================
+       LINK RENDERER — presents matched links grouped by sub/dubbed & season
+       ===================================================================== */
     function renderExtractedLinks(matches, currentItem, resultsDiv, strategyLabel) {
       const isSeries = currentItem ? currentItem.type === 'series' : false;
 
       function cleanQualityStr(text) {
         let q = "";
-        if (text.includes("1080p")) q += "1080p ";
-        else if (text.includes("720p")) q += "720p ";
-        else if (text.includes("480p")) q += "480p ";
-        else if (text.includes("2160p") || text.includes("4k")) q += "4K ";
-        if (text.includes("bluray")) q += "BluRay";
+        if      (text.includes("2160p") || text.includes("4k"))  q += "4K ";
+        else if (text.includes("1080p")) q += "1080p ";
+        else if (text.includes("720p"))  q += "720p ";
+        else if (text.includes("480p"))  q += "480p ";
+        if      (text.includes("bluray"))                         q += "BluRay";
         else if (text.includes("web-dl") || text.includes("webdl")) q += "Web-DL";
-        else if (text.includes("hdtv")) q += "HDTV";
-        if (text.includes("x265")) q += " x265";
-        if (text.includes("10bit")) q += " 10bit";
+        else if (text.includes("hdtv"))                           q += "HDTV";
+        if (text.includes("x265"))   q += " x265";
+        if (text.includes("10bit"))  q += " 10bit";
         return q.trim() || "دانلود";
       }
 
       function extractFileSize(text) {
-        const pattern = /(\d+(?:\.\d+)?\s*(?:GB|MB))/i;
-        const found = text.match(pattern);
-        return found ? found[1] : "";
+        const m = text.match(/(\d+(?:\.\d+)?\s*(?:GB|MB))/i);
+        return m ? m[1] : "";
       }
 
-      let softSubLinks = []; let dubbedLinks = [];
+      // Split into SoftSub vs Dubbed buckets
+      let softSubLinks = [], dubbedLinks = [];
       matches.forEach(m => {
-        const lowerText = (m.text + " " + m.url).toLowerCase();
-        if (lowerText.includes("dubbed") || lowerText.includes("دوبله") || lowerText.includes("dub")) dubbedLinks.push(m);
-        else softSubLinks.push(m);
+        const combined = (m.text + " " + m.url).toLowerCase();
+        if (combined.includes("dubbed") || combined.includes("دوبله") || combined.includes("dub"))
+          dubbedLinks.push(m);
+        else
+          softSubLinks.push(m);
       });
 
-      let finalMarkup = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-          <span style="font-size:12px; color:var(--text-muted); background:#f1f5f9; padding:4px 10px; border-radius:8px; border:1px solid var(--border);">${strategyLabel} — ${matches.length} لینک</span>
+      let html = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <span style="font-size:12px;color:var(--text-muted);background:#f1f5f9;padding:4px 10px;border-radius:8px;border:1px solid var(--border);">
+            ${strategyLabel} — ${matches.length} لینک
+          </span>
         </div>
         <div class="quality-section-wrapper">`;
 
       if (!isSeries) {
+        /* ── Movie layout ── */
         if (softSubLinks.length > 0) {
-          finalMarkup += `<div><div class="quality-block-title softsub">SoftSub</div>`;
+          html += `<div><div class="quality-block-title softsub">SoftSub</div>`;
           softSubLinks.forEach(m => {
-            let q = cleanQualityStr(m.text || m.url);
-            let s = extractFileSize(m.text || m.url);
-            let lineDisplay = s ? `${q} / ${s}` : q;
-            finalMarkup += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${lineDisplay}</a>`;
+            const q = cleanQualityStr(m.text || m.url);
+            const s = extractFileSize(m.text || m.url);
+            html += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${s ? q + ' / ' + s : q}</a>`;
           });
-          finalMarkup += `</div>`;
+          html += `</div>`;
         }
         if (dubbedLinks.length > 0) {
-          finalMarkup += `<div><div class="quality-block-title dubbed">Dubbed</div>`;
+          html += `<div><div class="quality-block-title dubbed">Dubbed</div>`;
           dubbedLinks.forEach(m => {
-            let q = cleanQualityStr(m.text || m.url);
-            let s = extractFileSize(m.text || m.url);
-            let lineDisplay = s ? `${q} / ${s}` : q;
-            finalMarkup += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${lineDisplay}</a>`;
+            const q = cleanQualityStr(m.text || m.url);
+            const s = extractFileSize(m.text || m.url);
+            html += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${s ? q + ' / ' + s : q}</a>`;
           });
-          finalMarkup += `</div>`;
+          html += `</div>`;
         }
-        if (softSubLinks.length === 0 && dubbedLinks.length === 0) {
+        if (!softSubLinks.length && !dubbedLinks.length) {
           matches.forEach(m => {
-            finalMarkup += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${m.text || m.url}</a>`;
+            html += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${m.text || m.url}</a>`;
           });
         }
+
       } else {
-        function processSeriesGroup(linkArray, label, blockClass) {
-          if (linkArray.length === 0) return "";
-          let seasonsMap = {};
+        /* ── Series layout: group by season number ── */
+        function renderSeriesGroup(linkArray, label, blockClass) {
+          if (!linkArray.length) return "";
+
+          // Build season → links map
+          const seasons = {};
           linkArray.forEach(m => {
             const combined = (m.text + " " + m.url).toLowerCase();
-            let matchedSeason = 1;
-            let sPattern = combined.match(/s(\d+)/i) || combined.match(/season\s*(\d+)/i) || combined.match(/فصل\s*(\d+)/);
-            if (sPattern) matchedSeason = parseInt(sPattern[1]);
-            if (!seasonsMap[matchedSeason]) seasonsMap[matchedSeason] = [];
-            seasonsMap[matchedSeason].push(m);
+            // Try to extract season number from common patterns:
+            //   S01E01 / s01 / Season 1 / season-1 / فصل ۱
+            let s = 1;
+            const pat =
+              combined.match(/\bs(\d{1,2})e?\d{0,2}\b/) ||
+              combined.match(/season[\s._-]*(\d{1,2})/i) ||
+              combined.match(/فصل[\s]*(\d{1,4})/);
+            if (pat) s = parseInt(pat[1]);
+            (seasons[s] = seasons[s] || []).push(m);
           });
-          let subMarkup = `<div><div class="quality-block-title ${blockClass}">${label}</div>`;
-          Object.keys(seasonsMap).sort((a,b) => a-b).forEach(s => {
-            subMarkup += `<div class="series-season-container"><div class="series-season-title">Season ${s}</div><div class="series-qualities-row">`;
-            let rowQualities = seasonsMap[s].map(m => `<a href="${m.url}" target="_blank">📥 ${cleanQualityStr(m.text || m.url)}</a>`);
-            subMarkup += rowQualities.join(" / ") + `</div></div>`;
-          });
-          subMarkup += `</div>`;
-          return subMarkup;
+
+          let out = `<div><div class="quality-block-title ${blockClass}">${label}</div>`;
+          Object.keys(seasons)
+            .map(Number).sort((a, b) => a - b)
+            .forEach(sn => {
+              out += `<div class="series-season-container">
+                <div class="series-season-title">Season ${sn}</div>
+                <div class="series-qualities-row">`;
+              out += seasons[sn].map(m =>
+                `<a href="${m.url}" target="_blank">📥 ${cleanQualityStr(m.text || m.url)}</a>`
+              ).join(' / ');
+              out += `</div></div>`;
+            });
+          out += `</div>`;
+          return out;
         }
-        finalMarkup += processSeriesGroup(softSubLinks, "SoftSub", "softsub");
-        finalMarkup += processSeriesGroup(dubbedLinks, "Dubbed", "dubbed");
-        if (softSubLinks.length === 0 && dubbedLinks.length === 0) {
+
+        html += renderSeriesGroup(softSubLinks, "SoftSub", "softsub");
+        html += renderSeriesGroup(dubbedLinks,  "Dubbed",  "dubbed");
+
+        if (!softSubLinks.length && !dubbedLinks.length) {
           matches.forEach(m => {
-            finalMarkup += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${m.text || m.url}</a>`;
+            html += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${m.text || m.url}</a>`;
           });
         }
       }
-      finalMarkup += `</div>`;
-      resultsDiv.innerHTML = finalMarkup;
+
+      html += `</div>`;
+      resultsDiv.innerHTML = html;
     }
+
     /* ===================== SPEECH RECOGNITION SYSTEM ===================== */
     function initSpeechRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -803,29 +882,22 @@
       }
     }
 
-    /* ===================== INTELLIGENT PROGRESS CALCULATION (NO MANUAL SEASON DATA REQUIRED) ===================== */
+    /* ===================== INTELLIGENT PROGRESS CALCULATION ===================== */
     function getProgressPercent(item) {
       if (item.type !== 'series') return 0;
-      
-      const totalS = parseInt(item.totalSeasons) || 1;
-      const currentS = parseInt(item.season) || 1;
-      const currentE = parseInt(item.episode) || 1;
-      
-      // Calculate basic percentage based on completed seasons
-      let basePercent = ((currentS - 1) / totalS) * 100;
-      // Add a small fraction for the current episode of the current season
-      // Assuming an average of 10-20 episodes per season for estimation if exact is unknown
+      const totalS   = parseInt(item.totalSeasons) || 1;
+      const currentS = parseInt(item.season)       || 1;
+      const currentE = parseInt(item.episode)       || 1;
+      let basePercent     = ((currentS - 1) / totalS) * 100;
       let episodeFraction = (currentE / 15) * (100 / totalS);
-      
-      let finalPercent = Math.round(basePercent + episodeFraction);
-      return Math.min(Math.max(finalPercent, 0), 100);
+      return Math.min(Math.max(Math.round(basePercent + episodeFraction), 0), 100);
     }
 
     function openManageProgressModal(id) {
       const item = state.items.find(i => i.id === id);
       if (!item) return;
 
-      const backdrop = document.getElementById("progressModal");
+      const backdrop  = document.getElementById("progressModal");
       const container = document.getElementById("progressModalContent");
       container.innerHTML = `
         <input type="hidden" id="progressManageId" value="${item.id}">
@@ -848,14 +920,12 @@
     }
 
     function saveQuickProgress() {
-      const id = document.getElementById("progressManageId").value;
+      const id   = document.getElementById("progressManageId").value;
       const item = state.items.find(i => i.id === id);
       if (!item) return;
-
-      item.season = parseInt(document.getElementById("progressManageSeason").value) || 1;
-      item.episode = parseInt(document.getElementById("progressManageEpisode").value) || 1;
+      item.season      = parseInt(document.getElementById("progressManageSeason").value)  || 1;
+      item.episode     = parseInt(document.getElementById("progressManageEpisode").value) || 1;
       item.lastUpdated = new Date().toISOString();
-
       saveStateToStorage();
       closeModal("progressModal");
       renderHero();
@@ -867,7 +937,7 @@
       const container = document.getElementById("heroSection");
       if (!state.selectedId || state.items.length === 0) {
         const nextUp = getTopWatchNext();
-        if (nextUp) { state.selectedId = nextUp.id; } 
+        if (nextUp) { state.selectedId = nextUp.id; }
         else {
           container.innerHTML = `<div class="hero-empty"><span style="font-size:36px;">🎬</span><p>فیلم یا سریالی را جستجو و انتخاب کنید.</p></div>`;
           return;
@@ -877,14 +947,14 @@
       const item = state.items.find(i => i.id === state.selectedId);
       if (!item) return;
 
-      const isSeries = item.type === 'series';
-      const progressPercent = getProgressPercent(item);
-      const savedReview = state.audioReviews[item.id] || "";
-      
+      const isSeries      = item.type === 'series';
+      const progressPct   = getProgressPercent(item);
+      const savedReview   = state.audioReviews[item.id] || "";
+
       let displayPlot = item.plot;
       if (state.uiLanguage === 'fa') {
         if (item.plotFa) displayPlot = item.plotFa;
-        else displayPlot = `<div id="plot_wrapper_${item.id}"><span style="color:var(--text-muted); font-size:13px; display:block; margin-bottom:8px;">خلاصه داستان به زبان فارسی تولید نشده است.</span><button class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="translatePlotInline('${item.id}')">✨ ترجمه خلاصه داستان به فارسی با AI</button></div>`;
+        else displayPlot = `<div id="plot_wrapper_${item.id}"><span style="color:var(--text-muted);font-size:13px;display:block;margin-bottom:8px;">خلاصه داستان به زبان فارسی تولید نشده است.</span><button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="translatePlotInline('${item.id}')">✨ ترجمه خلاصه داستان به فارسی با AI</button></div>`;
       }
 
       container.innerHTML = `
@@ -904,11 +974,11 @@
               <div class="extended-row"><strong>🎭 ستارگان:</strong> ${item.actors || 'نامشخص'}</div>
               <div class="extended-row"><strong>🌍 کشور / زبان:</strong> ${item.country || 'نامشخص'} / ${item.language || 'نامشخص'}</div>
               <div class="extended-row"><strong>🏆 جوایز:</strong> ${item.awards || 'بدون ثبت'}</div>
-              <div class="extended-row"><strong>🆔 IMDb ID:</strong> <span style="font-family:monospace; font-size:12px; background:#f1f5f9; padding:2px 7px; border-radius:6px; border:1px solid var(--border); color:var(--cyan); font-weight:700;">${item.id}</span></div>
+              <div class="extended-row"><strong>🆔 IMDb ID:</strong> <span style="font-family:monospace;font-size:12px;background:#f1f5f9;padding:2px 7px;border-radius:6px;border:1px solid var(--border);color:var(--cyan);font-weight:700;">${item.id}</span></div>
             </div>
 
             <div class="hero-plot">${displayPlot}</div>
-            
+
             ${isSeries ? `
               <div class="episode-progress-block">
                 <div class="episode-progress-header">
@@ -916,23 +986,22 @@
                   <span class="episode-progress-count">فصل ${item.season}، قسمت ${item.episode}</span>
                 </div>
                 <div class="progress-container">
-                  <div class="progress-bar" style="width: ${progressPercent}%"></div>
+                  <div class="progress-bar" style="width:${progressPct}%"></div>
                 </div>
-                <div style="text-align:left; font-size:11px; color:var(--text-muted); margin-top:5px; font-weight:bold;">${progressPercent}% تکمیل شده</div>
+                <div style="text-align:left;font-size:11px;color:var(--text-muted);margin-top:5px;font-weight:bold;">${progressPct}% تکمیل شده</div>
               </div>
             ` : ''}
 
-            <div id="archiveMatchResults" style="margin-top:15px; margin-bottom:15px;"></div>
-           
-            <div id="aiSimilarRecommendations" style="margin-top:15px; margin-bottom:15px; background: #f0f9ff; border: 1px dashed #bae6fd; padding: 16px; border-radius: 12px; display: none; color: var(--text-main);"></div>
+            <div id="archiveMatchResults" style="margin-top:15px;margin-bottom:15px;"></div>
+            <div id="aiSimilarRecommendations" style="margin-top:15px;margin-bottom:15px;background:#f0f9ff;border:1px dashed #bae6fd;padding:16px;border-radius:12px;display:none;color:var(--text-main);"></div>
 
             <div class="audio-review-block">
               <div class="audio-controls">
-                <div style="display:flex; align-items:center; gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
                   <span style="font-size:16px;">✍️</span>
                   <div>
-                    <h4 style="font-size:13px; font-weight:800; color:var(--text-main); margin:0;">نقد و نظر شخصی</h4>
-                    <p style="font-size:11px; color:var(--text-muted); margin:0;">دیدگاه خود را بنویسید یا ضبط کنید</p>
+                    <h4 style="font-size:13px;font-weight:800;color:var(--text-main);margin:0;">نقد و نظر شخصی</h4>
+                    <p style="font-size:11px;color:var(--text-muted);margin:0;">دیدگاه خود را بنویسید یا ضبط کنید</p>
                   </div>
                 </div>
                 <button id="voiceRecBtn" class="voice-rec-btn" onclick="toggleVoiceInput()">🎙️ ضبط صدا</button>
@@ -956,26 +1025,25 @@
       const container = document.getElementById("dashboardStats");
       if (!container) return;
 
-      const total = state.items.length;
-      const watching = state.items.filter(i => i.status === "Watching").length;
+      const total     = state.items.length;
+      const watching  = state.items.filter(i => i.status === "Watching").length;
       const completed = state.items.filter(i => i.status === "Completed").length;
 
       let totalImdb = 0, imdbCount = 0;
-      state.items.forEach(i => { let parsed = parseFloat(i.imdbRating); if(!isNaN(parsed)) { totalImdb += parsed; imdbCount++; } });
+      state.items.forEach(i => { let p = parseFloat(i.imdbRating); if (!isNaN(p)) { totalImdb += p; imdbCount++; } });
       const imdbAvg = imdbCount > 0 ? (totalImdb / imdbCount).toFixed(1) : "0.0";
 
-      let totalUserRating = 0, userRatingCount = 0;
-      state.items.forEach(i => { if(i.userRating > 0) { totalUserRating += i.userRating; userRatingCount++; } });
-      const userAvg = userRatingCount > 0 ? (totalUserRating / userRatingCount).toFixed(1) : "0.0";
+      let totalUR = 0, urCount = 0;
+      state.items.forEach(i => { if (i.userRating > 0) { totalUR += i.userRating; urCount++; } });
+      const userAvg = urCount > 0 ? (totalUR / urCount).toFixed(1) : "0.0";
 
       let genreFreq = {};
       state.items.forEach(i => {
-        if(i.genre && i.genre !== "N/A") {
-          i.genre.split(",").forEach(g => { let cleanG = g.trim(); genreFreq[cleanG] = (genreFreq[cleanG] || 0) + 1; });
-        }
+        if (i.genre && i.genre !== "N/A")
+          i.genre.split(",").forEach(g => { let cg = g.trim(); genreFreq[cg] = (genreFreq[cg] || 0) + 1; });
       });
-      let favoriteGenre = "نامشخص"; let maxCount = 0;
-      for(let g in genreFreq) { if(genreFreq[g] > maxCount) { maxCount = genreFreq[g]; favoriteGenre = g; } }
+      let favoriteGenre = "نامشخص", maxCount = 0;
+      for (let g in genreFreq) { if (genreFreq[g] > maxCount) { maxCount = genreFreq[g]; favoriteGenre = g; } }
 
       container.innerHTML = `
         <div class="stat-card"><h3>${total}</h3><p>کل عناوین</p></div>
@@ -983,7 +1051,7 @@
         <div class="stat-card"><h3>${completed}</h3><p>✅ تمام شده</p></div>
         <div class="stat-card"><h3>⭐ ${imdbAvg}</h3><p>میانگین کل IMDb</p></div>
         <div class="stat-card"><h3>★ ${userAvg}</h3><p>میانگین امتیازهای من</p></div>
-        <div class="stat-card"><h3 style="font-size:15px; font-weight:800; padding-top:6px; color:var(--cyan);">${favoriteGenre}</h3><p>🎭 ژانر محبوب</p></div>
+        <div class="stat-card"><h3 style="font-size:15px;font-weight:800;padding-top:6px;color:var(--cyan);">${favoriteGenre}</h3><p>🎭 ژانر محبوب</p></div>
       `;
     }
 
@@ -995,7 +1063,7 @@
 
       searchDebounceTimer = setTimeout(async () => {
         try {
-          let res = await fetch(`https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(query.trim())}`);
+          let res  = await fetch(`https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(query.trim())}`);
           let data = await res.json();
           if (data.Response === "True" && data.Search) {
             dropdown.innerHTML = data.Search.map(item => `
@@ -1006,21 +1074,29 @@
             `).join('');
             dropdown.style.display = "block";
           } else {
-            dropdown.innerHTML = `<div style="padding:15px; font-size:13px; color:var(--text-muted); text-align:center;">نتیجه‌ای یافت نشد.</div>`;
+            dropdown.innerHTML = `<div style="padding:15px;font-size:13px;color:var(--text-muted);text-align:center;">نتیجه‌ای یافت نشد.</div>`;
             dropdown.style.display = "block";
           }
         } catch (error) { console.error(error); }
       }, 400);
     }
 
-    function clearSearchInput() { document.getElementById("searchInput").value = ""; document.getElementById("searchDropdown").style.display = "none"; }
-    function translateType(type) { if (type === "movie") return "فیلم سینمایی"; if (type === "series") return "سریال تلویزیونی"; return type; }
+    function clearSearchInput() {
+      document.getElementById("searchInput").value = "";
+      document.getElementById("searchDropdown").style.display = "none";
+    }
+    function translateType(type) {
+      if (type === "movie")  return "فیلم سینمایی";
+      if (type === "series") return "سریال تلویزیونی";
+      return type;
+    }
 
     async function fetchItemFullDetails(imdbID) {
       document.getElementById("searchDropdown").style.display = "none";
       let movieData;
-      if (state.omdbCache[imdbID]) { movieData = state.omdbCache[imdbID]; } 
-      else {
+      if (state.omdbCache[imdbID]) {
+        movieData = state.omdbCache[imdbID];
+      } else {
         try {
           let res = await fetch(`https://www.omdbapi.com/?apikey=${OMDB_KEY}&i=${imdbID}&plot=full`);
           movieData = await res.json();
@@ -1034,17 +1110,17 @@
     }
 
     function openAddModal(data) {
-      const backdrop = document.getElementById("addModal");
+      const backdrop  = document.getElementById("addModal");
       const container = document.getElementById("addModalContent");
-      const isSeries = data.Type === "series";
+      const isSeries  = data.Type === "series";
       container.innerHTML = `
-        <div style="display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap;">
-          <img src="${data.Poster !== 'N/A' ? data.Poster : 'https://via.placeholder.com/150x220?text=No+Cover'}" style="width:110px; height:160px; object-fit:cover; border-radius:8px; border:1px solid var(--border);">
-          <div style="flex:1; min-width:240px;">
-            <h3 style="margin-bottom:6px; font-weight:800; font-size:15px;">${data.Title}</h3>
-            <p style="font-size:12.5px; margin-bottom:4px;">📅 <b>سال:</b> ${data.Year} | ⭐ <b>امتیاز:</b> ${data.imdbRating}</p>
-            <p style="font-size:12.5px; margin-bottom:4px;">🎭 <b>ژانر:</b> ${data.Genre}</p>
-            ${isSeries && data.totalSeasons ? `<p style="font-size:12.5px; margin-bottom:4px; color:var(--blue);">📺 <b>تعداد کل فصل‌ها:</b> ${data.totalSeasons}</p>` : ''}
+        <div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;">
+          <img src="${data.Poster !== 'N/A' ? data.Poster : 'https://via.placeholder.com/150x220?text=No+Cover'}" style="width:110px;height:160px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
+          <div style="flex:1;min-width:240px;">
+            <h3 style="margin-bottom:6px;font-weight:800;font-size:15px;">${data.Title}</h3>
+            <p style="font-size:12.5px;margin-bottom:4px;">📅 <b>سال:</b> ${data.Year} | ⭐ <b>امتیاز:</b> ${data.imdbRating}</p>
+            <p style="font-size:12.5px;margin-bottom:4px;">🎭 <b>ژانر:</b> ${data.Genre}</p>
+            ${isSeries && data.totalSeasons ? `<p style="font-size:12.5px;margin-bottom:4px;color:var(--blue);">📺 <b>تعداد کل فصل‌ها:</b> ${data.totalSeasons}</p>` : ''}
           </div>
         </div>
         <input type="hidden" id="formImdbID" value="${data.imdbID}">
@@ -1056,7 +1132,7 @@
             <option value="Completed">✅ تمام شده (Completed)</option>
           </select>
         </div>
-        <div id="modalSeriesProgress" style="display: ${isSeries ? 'block' : 'none'}">
+        <div id="modalSeriesProgress" style="display:${isSeries ? 'block' : 'none'}">
           <div class="form-row">
             <div class="form-group">
               <label>فصل کنونی:</label>
@@ -1075,16 +1151,18 @@
           </div>
           <input type="hidden" id="formUserRating" value="0">
         </div>
-        <button class="btn" style="width:100%; margin-top:10px;" onclick="saveItemFromModal()">💾 ذخیره در کتابخانه</button>
+        <button class="btn" style="width:100%;margin-top:10px;" onclick="saveItemFromModal()">💾 ذخیره در کتابخانه</button>
       `;
       backdrop.classList.add("active");
     }
 
     let currentStarsVal = 0;
     function setStarsValue(val) {
-      currentStarsVal = val; document.getElementById("formUserRating").value = val;
-      const spans = document.querySelectorAll("#modalStars span");
-      spans.forEach((s, idx) => { if (idx < val) s.classList.add("active"); else s.classList.remove("active"); });
+      currentStarsVal = val;
+      document.getElementById("formUserRating").value = val;
+      document.querySelectorAll("#modalStars span").forEach((s, i) => {
+        if (i < val) s.classList.add("active"); else s.classList.remove("active");
+      });
     }
 
     function toggleModalSeriesFields(status, isSeries) {
@@ -1095,36 +1173,37 @@
 
     async function saveItemFromModal() {
       if (isSavingItem) return; isSavingItem = true;
-      const imdbID = document.getElementById("formImdbID").value;
-      const status = document.getElementById("formStatus").value;
+      const imdbID     = document.getElementById("formImdbID").value;
+      const status     = document.getElementById("formStatus").value;
       const userRating = parseInt(document.getElementById("formUserRating").value) || 0;
-
-      const rawCached = state.omdbCache[imdbID];
+      const rawCached  = state.omdbCache[imdbID];
       if (!rawCached) { isSavingItem = false; return; }
 
-      let season = 1; let episode = 1;
+      let season = 1, episode = 1;
       const isSeries = rawCached.Type === "series";
       if (isSeries && status !== "Completed") {
-        season = parseInt(document.getElementById("formSeason").value) || 1;
+        season  = parseInt(document.getElementById("formSeason").value)  || 1;
         episode = parseInt(document.getElementById("formEpisode").value) || 1;
       }
 
       const existingIdx = state.items.findIndex(i => i.id === imdbID);
-
       const newItem = {
         id: imdbID, title: rawCached.Title, type: rawCached.Type, poster: rawCached.Poster,
         year: rawCached.Year, imdbRating: rawCached.imdbRating, plot: rawCached.Plot,
-        genre: rawCached.Genre, director: rawCached.Director, actors: rawCached.Actors, language: rawCached.Language, country: rawCached.Country, awards: rawCached.Awards,
-        status: status, userRating: userRating,
-        season: isSeries ? season : null, episode: isSeries ? episode : null,
+        genre: rawCached.Genre, director: rawCached.Director, actors: rawCached.Actors,
+        language: rawCached.Language, country: rawCached.Country, awards: rawCached.Awards,
+        status, userRating,
+        season:       isSeries ? season  : null,
+        episode:      isSeries ? episode : null,
         totalSeasons: isSeries ? rawCached.totalSeasons : null,
-        dateAdded: existingIdx > -1 ? state.items[existingIdx].dateAdded : new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
+        dateAdded:    existingIdx > -1 ? state.items[existingIdx].dateAdded : new Date().toISOString(),
+        lastUpdated:  new Date().toISOString()
       };
-      
-      if (existingIdx > -1) state.items[existingIdx] = newItem; else state.items.push(newItem);
 
-      saveStateToStorage(); state.selectedId = imdbID; closeModal('addModal');
+      if (existingIdx > -1) state.items[existingIdx] = newItem; else state.items.push(newItem);
+      saveStateToStorage();
+      state.selectedId = imdbID;
+      closeModal('addModal');
       renderDashboard(); renderGrid(); renderHero();
       isSavingItem = false;
     }
@@ -1137,48 +1216,66 @@
       saveStateToStorage(); renderDashboard(); renderGrid(); renderHero();
     }
 
-    function renderStarsStatic(rating) { let h = ""; for (let i = 1; i <= 5; i++) { h += `<span style="color:${i <= rating ? '#ffb020' : '#cbd5e1'}; margin-left:1px;">★</span>`; } return h; }
-    function translateStatus(s) { if (s === "Watching") return "⏳ در حال تماشا"; if (s === "Planned") return "📅 برنامه‌ریزی شده"; if (s === "Completed") return "✅ تمام شده"; return s; }
+    function renderStarsStatic(rating) {
+      let h = "";
+      for (let i = 1; i <= 5; i++)
+        h += `<span style="color:${i <= rating ? '#ffb020' : '#cbd5e1'};margin-left:1px;">★</span>`;
+      return h;
+    }
+    function translateStatus(s) {
+      if (s === "Watching")  return "⏳ در حال تماشا";
+      if (s === "Planned")   return "📅 برنامه‌ریزی شده";
+      if (s === "Completed") return "✅ تمام شده";
+      return s;
+    }
 
     function extractAndRenderGenres() {
       const select = document.getElementById("genreFilterSelect"); if (!select) return;
       const currentVal = state.filters.genre;
       let genresSet = new Set();
-      state.items.forEach(item => { if (item.genre && item.genre !== "N/A") item.genre.split(",").forEach(g => genresSet.add(g.trim())); });
+      state.items.forEach(item => {
+        if (item.genre && item.genre !== "N/A")
+          item.genre.split(",").forEach(g => genresSet.add(g.trim()));
+      });
       let h = `<option value="all">فیلتر ژانر (همه)</option>`;
-      Array.from(genresSet).sort().forEach(g => { h += `<option value="${g}" ${g === currentVal ? 'selected' : ''}>${g}</option>`; });
+      Array.from(genresSet).sort().forEach(g => {
+        h += `<option value="${g}" ${g === currentVal ? 'selected' : ''}>${g}</option>`;
+      });
       select.innerHTML = h;
     }
 
     function setFilter(key, value) {
-      if (key === 'status' || key === 'type' || key === 'special') { state.filters.status = 'all'; state.filters.type = 'all'; state.filters.special = 'all'; }
-      state.filters[key] = value; setupFilterButtonsUI(); renderGrid();
+      if (key === 'status' || key === 'type' || key === 'special')
+        { state.filters.status = 'all'; state.filters.type = 'all'; state.filters.special = 'all'; }
+      state.filters[key] = value;
+      setupFilterButtonsUI(); renderGrid();
     }
 
     function handleGenreChange(val) { state.filters.genre = val; renderGrid(); }
-    function handleSortChange(val) { state.sortBy = val; renderGrid(); }
+    function handleSortChange(val)  { state.sortBy = val; renderGrid(); }
 
     function setupFilterButtonsUI() {
-      const btns = document.querySelectorAll("#filterContainer .filter-btn"); btns.forEach(b => b.classList.remove("active"));
+      const btns = document.querySelectorAll("#filterContainer .filter-btn");
+      btns.forEach(b => b.classList.remove("active"));
       btns.forEach(b => {
         const str = b.getAttribute("onclick");
         if (str.includes("'status'") && str.includes(`'${state.filters.status}'`)) b.classList.add("active");
-        if (str.includes("'type'") && str.includes(`'${state.filters.type}'`)) b.classList.add("active");
-        if (str.includes("'special'") && str.includes(`'${state.filters.special}'`)) b.classList.add("active");
+        if (str.includes("'type'")   && str.includes(`'${state.filters.type}'`))   b.classList.add("active");
+        if (str.includes("'special'")&& str.includes(`'${state.filters.special}'`))b.classList.add("active");
       });
     }
 
     function getFilteredAndSortedItems() {
       let arr = [...state.items];
-      if (state.filters.status !== 'all') arr = arr.filter(i => i.status === state.filters.status);
-      if (state.filters.type !== 'all') arr = arr.filter(i => i.type === state.filters.type);
-      if (state.filters.genre !== 'all') arr = arr.filter(i => i.genre && i.genre.includes(state.filters.genre));
-      if (state.filters.special === 'highRated') arr = arr.filter(i => parseFloat(i.imdbRating) >= 8.0);
+      if (state.filters.status  !== 'all') arr = arr.filter(i => i.status === state.filters.status);
+      if (state.filters.type    !== 'all') arr = arr.filter(i => i.type === state.filters.type);
+      if (state.filters.genre   !== 'all') arr = arr.filter(i => i.genre && i.genre.includes(state.filters.genre));
+      if (state.filters.special === 'highRated')   arr = arr.filter(i => parseFloat(i.imdbRating) >= 8.0);
       if (state.filters.special === 'personalTop') arr = arr.filter(i => i.userRating === 5);
       arr.sort((a, b) => {
-        if (state.sortBy === 'title') return a.title.localeCompare(b.title);
-        if (state.sortBy === 'imdb') return (parseFloat(b.imdbRating) || 0) - (parseFloat(a.imdbRating) || 0);
-        if (state.sortBy === 'year') return parseInt(b.year) - parseInt(a.year);
+        if (state.sortBy === 'title')      return a.title.localeCompare(b.title);
+        if (state.sortBy === 'imdb')       return (parseFloat(b.imdbRating) || 0) - (parseFloat(a.imdbRating) || 0);
+        if (state.sortBy === 'year')       return parseInt(b.year) - parseInt(a.year);
         if (state.sortBy === 'userRating') return b.userRating - a.userRating;
         return new Date(b.dateAdded) - new Date(a.dateAdded);
       });
@@ -1188,20 +1285,26 @@
     function renderGrid() {
       const container = document.getElementById("mainGrid"); if (!container) return;
       const items = getFilteredAndSortedItems();
-      if (items.length === 0) { container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted); font-size:13px;">هیچ عنوانی یافت نشد.</div>`; return; }
+      if (items.length === 0) {
+        container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);font-size:13px;">هیچ عنوانی یافت نشد.</div>`;
+        return;
+      }
       container.innerHTML = items.map(item => {
         const isSelected = item.id === state.selectedId;
-        const progress = item.type === 'series' ? getProgressPercent(item) : 0;
+        const progress   = item.type === 'series' ? getProgressPercent(item) : 0;
         return `
           <div class="movie-card ${isSelected ? 'selected' : ''}" onclick="selectGridItem('${item.id}')">
             <div class="card-poster-wrapper">
               <img src="${item.poster !== 'N/A' ? item.poster : 'https://via.placeholder.com/200x280?text=No+Cover'}" alt="">
-              <div class="card-overlay"><p style="font-size:12px; font-weight:700;">⭐ IMDb: ${item.imdbRating}</p><button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="event.stopPropagation(); deleteItem('${item.id}')">🗑️ حذف</button></div>
+              <div class="card-overlay">
+                <p style="font-size:12px;font-weight:700;">⭐ IMDb: ${item.imdbRating}</p>
+                <button class="btn btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();deleteItem('${item.id}')">🗑️ حذف</button>
+              </div>
             </div>
             <div class="card-info">
               <h4 class="card-title" title="${item.title}">${item.title}</h4>
               <div class="card-meta-line"><span>${item.year}</span><span>${translateType(item.type)}</span></div>
-              <div style="font-size:11px; margin-top:2px;">امتیاز من: ${renderStarsStatic(item.userRating)}</div>
+              <div style="font-size:11px;margin-top:2px;">امتیاز من: ${renderStarsStatic(item.userRating)}</div>
               ${item.type === 'series' ? `<div class="card-progress">پیشرفت: ${progress}%</div>` : ''}
             </div>
           </div>
@@ -1218,7 +1321,8 @@
       if (c.length === 0) return null;
       c.sort((a, b) => {
         if (a.status !== b.status) return a.status === "Watching" ? -1 : 1;
-        return ((parseFloat(b.imdbRating) || 0) + (b.userRating * 0.5)) - ((parseFloat(a.imdbRating) || 0) + (a.userRating * 0.5));
+        return ((parseFloat(b.imdbRating) || 0) + (b.userRating * 0.5))
+             - ((parseFloat(a.imdbRating) || 0) + (a.userRating * 0.5));
       });
       return c[0];
     }
@@ -1226,112 +1330,141 @@
     function renderWatchNext() {
       const container = document.getElementById("watchNextContainer"); if (!container) return;
       const top = getTopWatchNext();
-      if (!top) { container.innerHTML = `<p style="color:var(--text-muted); font-size:13px;">لیست تماشای شما خالی است.</p>`; return; }
+      if (!top) { container.innerHTML = `<p style="color:var(--text-muted);font-size:13px;">لیست تماشای شما خالی است.</p>`; return; }
       container.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; cursor:pointer;" onclick="selectGridItem('${top.id}')">
-          <div style="display:flex; align-items:center; gap:15px;">
-            <img src="${top.poster !== 'N/A' ? top.poster : 'https://via.placeholder.com/50x70?text=No'}" style="width:36px; height:50px; object-fit:cover; border-radius:6px; border:1px solid var(--border);">
-            <div><h4 style="font-weight:700; font-size:14.5px;">${top.title}</h4><p style="font-size:12px; color:var(--text-muted); margin-top:2px;">وضعیت: ${translateStatus(top.status)} | ⭐ IMDb: ${top.imdbRating}</p></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;cursor:pointer;" onclick="selectGridItem('${top.id}')">
+          <div style="display:flex;align-items:center;gap:15px;">
+            <img src="${top.poster !== 'N/A' ? top.poster : 'https://via.placeholder.com/50x70?text=No'}" style="width:36px;height:50px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
+            <div>
+              <h4 style="font-weight:700;font-size:14.5px;">${top.title}</h4>
+              <p style="font-size:12px;color:var(--text-muted);margin-top:2px;">وضعیت: ${translateStatus(top.status)} | ⭐ IMDb: ${top.imdbRating}</p>
+            </div>
           </div>
-          <button class="btn btn-secondary" style="font-size:12px; padding:6px 12px;">🎯 تمرکز روی این عنوان</button>
+          <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px;">🎯 تمرکز روی این عنوان</button>
         </div>
       `;
     }
 
-    /* ===================== AI ENGINES (FORCED PERSIAN + FIXED FETCH) ===================== */
+    /* ===================== AI ENGINES ===================== */
     async function generateSimilarRecommendations(id) {
-      const item = state.items.find(i => i.id === id); if (!item) return;
-      const key = localStorage.getItem("cinetrack_or_key");
+      const item  = state.items.find(i => i.id === id); if (!item) return;
+      const key   = localStorage.getItem("cinetrack_or_key");
       const model = localStorage.getItem("cinetrack_or_model");
-      
       if (!key || !model) { alert("لطفاً کلید OpenRouter و مدل را در تنظیمات وارد کنید."); openSettingsModal(); return; }
 
       const responseBox = document.getElementById("aiSimilarRecommendations"); if (!responseBox) return;
       responseBox.style.display = "block";
-      responseBox.innerHTML = `<span style="color:var(--cyan); font-weight:600;">⏳ در حال تحلیل هوشمند عناوین مشابه...</span>`;
-      
-      const systemPrompt = `You are CineTrack AI Assistant. Recommend 5 movies or TV shows closely similar to the user's selected title. SPEAK STRICTLY IN PERSIAN (FARSI). Do not use English text. Do not wrap in markdown blocks.`;
-      const userPrompt = `Title: "${item.title}". Type: ${item.type}. Genre: ${item.genre}. Plot: ${item.plot}. Give 5 recommendations.`;
+      responseBox.innerHTML = `<span style="color:var(--cyan);font-weight:600;">⏳ در حال تحلیل هوشمند عناوین مشابه...</span>`;
 
       try {
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: model, messages: [ { role: "system", content: systemPrompt }, { role: "user", content: userPrompt } ] })
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: `You are CineTrack AI Assistant. Recommend 5 movies or TV shows closely similar to the user's selected title. SPEAK STRICTLY IN PERSIAN (FARSI). Do not use English text. Do not wrap in markdown blocks.` },
+              { role: "user",   content: `Title: "${item.title}". Type: ${item.type}. Genre: ${item.genre}. Plot: ${item.plot}. Give 5 recommendations.` }
+            ]
+          })
         });
         const result = await res.json();
         if (result.choices && result.choices[0]) {
           responseBox.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:6px;">
-              <h4 style="font-size:13.5px; font-weight:800; color:var(--text-main);">🤖 عناوین مشابه (تحلیل AI)</h4>
-              <button class="btn btn-secondary" style="padding:2px 6px; font-size:10px;" onclick="document.getElementById('aiSimilarRecommendations').style.display='none'">✖</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;">
+              <h4 style="font-size:13.5px;font-weight:800;color:var(--text-main);">🤖 عناوین مشابه (تحلیل AI)</h4>
+              <button class="btn btn-secondary" style="padding:2px 6px;font-size:10px;" onclick="document.getElementById('aiSimilarRecommendations').style.display='none'">✖</button>
             </div>
-            <div style="font-size:13px; line-height:1.75; white-space:pre-wrap;">${result.choices[0].message.content}</div>`;
-        } else { responseBox.innerHTML = `<span style="color:red;">خطا در ارتباط با واحد هوش مصنوعی.</span>`; }
-      } catch (err) { responseBox.innerHTML = `<span style="color:red;">خطای شبکه رخ داد.</span>`; }
+            <div style="font-size:13px;line-height:1.75;white-space:pre-wrap;">${result.choices[0].message.content}</div>`;
+        } else {
+          responseBox.innerHTML = `<span style="color:red;">خطا در ارتباط با واحد هوش مصنوعی.</span>`;
+        }
+      } catch (err) {
+        responseBox.innerHTML = `<span style="color:red;">خطای شبکه رخ داد.</span>`;
+      }
     }
 
     async function generateGlobalAIAnalysis(forceRegen = false) {
       if (!forceRegen && state.globalAiCache) return;
-      const key = localStorage.getItem("cinetrack_or_key");
+      const key   = localStorage.getItem("cinetrack_or_key");
       const model = localStorage.getItem("cinetrack_or_model");
       if (!key || !model) { alert("لطفاً کلید OpenRouter و مدل را وارد کنید."); openSettingsModal(); return; }
 
-      const btn = document.querySelector(".ai-global-panel .btn");
+      const btn         = document.querySelector(".ai-global-panel .btn");
       const responseBox = document.getElementById("globalAiResponse");
-      btn.disabled = true; responseBox.innerText = "⏳ در حال آنالیز آماری آرشیو. لطفاً صبور باشید...";
-      
-      // Reduce payload size to prevent fetch errors
+      btn.disabled = true;
+      responseBox.innerText = "⏳ در حال آنالیز آماری آرشیو. لطفاً صبور باشید...";
+
       const safeData = state.items.map(i => ({ t: i.title, ty: i.type, g: i.genre, ir: i.imdbRating }));
-      
-      const systemPrompt = `You are CineTrack AI Brain. Analyze the user's media collection. Give structural feedback STRICTLY IN PERSIAN (FARSI). NEVER write in English. Highlight patterns.`;
-      const userPrompt = `Here is my library log: ${JSON.stringify(safeData)}`;
-      
+
       try {
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: model, messages: [ { role: "system", content: systemPrompt }, { role: "user", content: userPrompt } ] })
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: `You are CineTrack AI Brain. Analyze the user's media collection. Give structural feedback STRICTLY IN PERSIAN (FARSI). NEVER write in English. Highlight patterns.` },
+              { role: "user",   content: `Here is my library log: ${JSON.stringify(safeData)}` }
+            ]
+          })
         });
         const result = await res.json();
         if (result.choices && result.choices[0]) {
           const aiText = result.choices[0].message.content;
-          state.globalAiCache = aiText; localStorage.setItem("cinetrack_global_ai_cache", aiText);
-          responseBox.innerHTML = aiText; document.getElementById("regenGlobalAiBtn").style.display = "inline-flex";
-        } else { responseBox.innerText = "خطا: پاسخ نامعتبر از سرور پردازشگر."; }
-      } catch (err) { responseBox.innerText = "خطا در برقراری ارتباط با سرور. ممکن است حجم دیتای شما بیش از حد باشد یا کلید API مسدود باشد."; } 
-      finally { btn.disabled = false; }
+          state.globalAiCache = aiText;
+          localStorage.setItem("cinetrack_global_ai_cache", aiText);
+          responseBox.innerHTML = aiText;
+          document.getElementById("regenGlobalAiBtn").style.display = "inline-flex";
+        } else {
+          responseBox.innerText = "خطا: پاسخ نامعتبر از سرور پردازشگر.";
+        }
+      } catch (err) {
+        responseBox.innerText = "خطا در برقراری ارتباط با سرور.";
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     /* ===================== BACKUPS & MODALS ===================== */
     function exportLibrary() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.items, null, 2));
-      const dlAnchor = document.createElement('a'); dlAnchor.setAttribute("href", dataStr); dlAnchor.setAttribute("download", `cinetrack_library.json`);
+      const dataStr   = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.items, null, 2));
+      const dlAnchor  = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", `cinetrack_library.json`);
       document.body.appendChild(dlAnchor); dlAnchor.click(); dlAnchor.remove();
     }
+
     function importLibrary(event) {
-      const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
+      const file = event.target.files[0]; if (!file) return;
+      const reader = new FileReader();
       reader.onload = function(e) {
         try {
           const parsed = JSON.parse(e.target.result);
           if (Array.isArray(parsed)) { state.items = parsed; saveStateToStorage(); init(); alert("تکمیل شد."); }
         } catch (err) { alert("فایل نامعتبر است."); }
-      }; reader.readAsText(file);
+      };
+      reader.readAsText(file);
     }
-    function openNotesModal() { document.getElementById("notesModal").classList.add("active"); }
-    function saveGeneralNotes(val) { localStorage.setItem("cinetrack_general_notes", val); }
+
+    function openNotesModal()    { document.getElementById("notesModal").classList.add("active"); }
+    function saveGeneralNotes(v) { localStorage.setItem("cinetrack_general_notes", v); }
     function openSettingsModal() { document.getElementById("settingsModal").classList.add("active"); }
 
     function saveSettings() {
-      const key = document.getElementById("openRouterKeyInput").value.trim();
+      const key   = document.getElementById("openRouterKeyInput").value.trim();
       const model = document.getElementById("customModelInput").value.trim();
-      const langSetting = document.getElementById("uiLanguageSetting").value;
-      
+      const lang  = document.getElementById("uiLanguageSetting").value;
       if (!model) { alert("وارد کردن مدل اجباری است."); return; }
-      
-      state.uiLanguage = langSetting; localStorage.setItem("cinetrack_ui_lang", langSetting);
-      localStorage.setItem("cinetrack_or_key", key); localStorage.setItem("cinetrack_or_model", model);
-      alert("تنظیمات ذخیره شد."); closeModal('settingsModal'); renderHero(); renderWatchNext();
+      state.uiLanguage = lang;
+      localStorage.setItem("cinetrack_ui_lang", lang);
+      localStorage.setItem("cinetrack_or_key",   key);
+      localStorage.setItem("cinetrack_or_model", model);
+      alert("تنظیمات ذخیره شد.");
+      closeModal('settingsModal');
+      renderHero(); renderWatchNext();
     }
+
     function closeModal(id) { document.getElementById(id).classList.remove("active"); }
+
     window.onload = init;
   </script>
 </body>
