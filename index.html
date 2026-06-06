@@ -95,8 +95,47 @@
     .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 6px; overflow: hidden; }
     .progress-bar { height: 100%; background: var(--cyan); width: 0%; border-radius: 10px; transition: width 0.5s ease-in-out; }
 
-    .audio-review-block { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-top: 20px; }
-    .audio-controls { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+    .audio-review-block {
+      background: linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%);
+      border: 1.5px solid rgba(14, 165, 233, 0.2);
+      border-radius: 16px; padding: 18px; margin-top: 20px;
+      box-shadow: 0 2px 12px rgba(14, 165, 233, 0.06);
+      position: relative;
+    }
+    .audio-review-block::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--blue));
+      border-radius: 16px 16px 0 0;
+    }
+    .audio-controls { display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center; }
+    .review-textarea {
+      width: 100%; min-height: 90px; resize: vertical;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(4px);
+      border: 1.5px solid rgba(14, 165, 233, 0.15);
+      border-radius: 12px; padding: 12px 14px;
+      font-size: 13.5px; line-height: 1.7; color: var(--text-main);
+      font-family: 'Vazirmatn', sans-serif; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box;
+    }
+    .review-textarea:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    }
+    .review-textarea::placeholder { color: #94a3b8; }
+    .voice-rec-btn {
+      background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+      border: 1.5px solid var(--border); color: var(--text-main);
+      padding: 6px 14px; border-radius: 20px; cursor: pointer;
+      font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+      transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .voice-rec-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+    .voice-rec-btn.recording {
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border-color: #f59e0b; color: #b45309;
+      animation: pulse-rec 1.2s infinite;
+    }
+    @keyframes pulse-rec { 0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 50% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); } }
 
     .dashboard-stats { margin: 0 30px 30px 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; }
 
@@ -385,7 +424,7 @@
       renderWatchNext();
     }
 
-    /* ===================== ARCHIVE MATCHING ENGINE ===================== */
+    /* ===================== ARCHIVE MATCHING ENGINE (4-STAGE SMART SEARCH) ===================== */
     function handleArchiveHtmlUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -401,34 +440,198 @@
       reader.readAsText(file);
     }
 
-    function findMatchInArchive(imdbID) {
-      if (!state.archiveHtmlSource) return null;
-      const cleanImdbId = imdbID.trim().toLowerCase();
-      const matchedLinks = [];
+    function getAllArchiveLinks() {
+      if (!state.archiveHtmlSource) return [];
       const parser = new DOMParser();
       const doc = parser.parseFromString(state.archiveHtmlSource, 'text/html');
-      const allLinks = doc.getElementsByTagName('a');
-      for (let link of allLinks) {
-        const hrefText = link.getAttribute('href') || '';
-        const innerText = link.innerText || '';
-        if (hrefText.toLowerCase().includes(cleanImdbId) || innerText.toLowerCase().includes(cleanImdbId)) {
-          matchedLinks.push({ text: link.innerText.trim() || "لینک دانلود", url: hrefText });
-        }
-      }
-      return matchedLinks;
+      return Array.from(doc.getElementsByTagName('a')).map(link => ({
+        text: (link.innerText || link.textContent || '').trim(),
+        url: link.getAttribute('href') || ''
+      })).filter(l => l.url && l.url.length > 5);
     }
 
-    function matchAndExtractLinks(imdbID) {
-      const matches = findMatchInArchive(imdbID);
+    // Build a regex from a title that matches URL slugs and text:
+    // "Breaking Bad" → /breaking[-_.\s]bad/i
+    // Handles multi-word titles, ignores punctuation/articles
+    function buildTitleRegex(title) {
+      const cleaned = title.toLowerCase()
+        .replace(/[''':!?,.()\[\]]/g, '')
+        .replace(/\s+/g, ' ').trim();
+      const words = cleaned.split(' ').filter(w => w.length > 0);
+      // Join words with flexible separator (hyphen, underscore, dot, space)
+      const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[-_. ]?');
+      return new RegExp(pattern, 'i');
+    }
+
+    // Does a link contain a season/episode marker? (S01E01, Season 1, فصل ۱, etc.)
+    function hasSeriesMarker(link) {
+      const combined = (link.text + ' ' + link.url).toLowerCase();
+      return /s\d{1,2}e\d{1,2}|\bs\d{2}\b|season[\s._-]*\d|فصل[\s]*\d/.test(combined);
+    }
+
+    // STAGE 1: IMDb code exact search — the most precise, no false positives
+    function searchByImdbId(allLinks, imdbID) {
+      const cleanId = imdbID.toLowerCase();
+      return allLinks.filter(l =>
+        l.url.toLowerCase().includes(cleanId) || l.text.toLowerCase().includes(cleanId)
+      );
+    }
+
+    // STAGE 2: Combined — IMDb code OR title slug match, then deduplicate.
+    // For series: filter combined results to those with season markers to exclude
+    // related movies (e.g. "El Camino" won't have S01E01 markers).
+    function searchCombined(allLinks, title, imdbID, itemType) {
+      const cleanId = imdbID.toLowerCase();
+      const titleRx = buildTitleRegex(title);
+
+      // Gather all links matching IMDb code
+      const byId = allLinks.filter(l =>
+        l.url.toLowerCase().includes(cleanId) || l.text.toLowerCase().includes(cleanId)
+      );
+
+      // Gather all links matching title slug in URL or text
+      const byTitle = allLinks.filter(l => titleRx.test(l.url) || titleRx.test(l.text));
+
+      // Deduplicate union
+      const seen = new Set();
+      const union = [...byId, ...byTitle].filter(l => {
+        const key = l.url;
+        if (seen.has(key)) return false;
+        seen.add(key); return true;
+      });
+
+      if (itemType === 'series' && union.length > 0) {
+        // For series: prefer links that have season markers — cuts out movie spin-offs
+        const withMarker = union.filter(hasSeriesMarker);
+        // If we found series-marked links, return those; otherwise fall through
+        if (withMarker.length > 0) return withMarker;
+      }
+
+      return union;
+    }
+
+    // STAGE 3: Title-only with strict slug matching + series marker requirement
+    function searchByTitleStrict(allLinks, title, itemType) {
+      const titleRx = buildTitleRegex(title);
+      const matches = allLinks.filter(l => titleRx.test(l.url) || titleRx.test(l.text));
+
+      if (itemType === 'series' && matches.length > 0) {
+        // Strict: only return links that also have a season/episode marker
+        const withMarker = matches.filter(hasSeriesMarker);
+        if (withMarker.length > 0) return withMarker;
+        // If no markers found at all, return raw title matches (some archives don't mark)
+        return matches;
+      }
+
+      return matches;
+    }
+
+    async function searchWithAI(item, allLinks) {
+      const key = localStorage.getItem("cinetrack_or_key");
+      const model = localStorage.getItem("cinetrack_or_model");
+      if (!key || !model) return null;
+
+      // Build condensed link list — first try a broader scan of all links (up to 500)
+      const linkList = allLinks.slice(0, 500).map((l, i) =>
+        `${i}: [${l.text.slice(0,80)}] ${l.url.slice(0,150)}`
+      ).join('\n');
+
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              {
+                role: "system",
+                content: `You are a precise download link matcher. Given a numbered list of links from an archive page and a title with its IMDb ID, return ONLY the indices (comma-separated) of links that specifically belong to this exact title — NOT related titles or spin-offs. For TV series, only include links with season/episode markers. If none match, return NONE. Output numbers or NONE only — no explanation.`
+              },
+              {
+                role: "user",
+                content: `Find links for:\nTitle: "${item.title}"\nIMDb ID: ${item.id}\nYear: ${item.year}\nType: ${item.type === 'series' ? 'TV Series' : 'Movie'}\n\nLinks:\n${linkList}`
+              }
+            ],
+            max_tokens: 300
+          })
+        });
+        const result = await res.json();
+        if (result.choices && result.choices[0]) {
+          const answer = result.choices[0].message.content.trim();
+          if (/^none$/i.test(answer) || answer === '') return [];
+          const indices = answer.split(/[\s,،]+/)
+            .map(n => parseInt(n.trim()))
+            .filter(n => !isNaN(n) && n >= 0 && n < allLinks.length);
+          return indices.map(i => allLinks[i]);
+        }
+      } catch (e) { console.error("AI link search failed:", e); }
+      return null;
+    }
+
+    async function matchAndExtractLinks(imdbID) {
+      const item = state.items.find(i => i.id === imdbID);
       const resultsDiv = document.getElementById("archiveMatchResults");
       if (!resultsDiv) return;
 
-      if (!matches || matches.length === 0) {
-        resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06); border:1px solid #f87171; padding:15px; border-radius:12px; font-size:13px; color:#b91c1c;">⚠️ کد IMDb در سورس آرشیو شما یافت نشد.</div>`;
+      if (!state.archiveHtmlSource) {
+        resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06); border:1px solid #f87171; padding:15px; border-radius:12px; font-size:13px; color:#b91c1c;">⚠️ فایل آرشیو بارگذاری نشده است. در تنظیمات فایل HTML آرشیو را آپلود کنید.</div>`;
         return;
       }
 
-      const currentItem = state.items.find(i => i.id === imdbID);
+      resultsDiv.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:12px; background:#f0f9ff; border:1px solid rgba(14,165,233,0.2); border-radius:10px; font-size:13px; color:var(--cyan); font-weight:600;">🔍 مرحله ۱: جستجو با کد IMDb...</div>`;
+      await new Promise(r => setTimeout(r, 0)); // allow UI to paint
+
+      const allLinks = getAllArchiveLinks();
+      let matches = [];
+      let strategyLabel = '';
+
+      // ── STAGE 1: IMDb code only ────────────────────────────────────────────
+      matches = searchByImdbId(allLinks, imdbID);
+      if (matches.length > 0) {
+        strategyLabel = `🆔 یافت با کد IMDb: <b>${imdbID}</b>`;
+        renderExtractedLinks(matches, item, resultsDiv, strategyLabel);
+        return;
+      }
+
+      // ── STAGE 2: IMDb code OR title slug combined (series-marker filtered) ─
+      resultsDiv.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:12px; background:#f0f9ff; border:1px solid rgba(14,165,233,0.2); border-radius:10px; font-size:13px; color:var(--cyan); font-weight:600;">🔍 مرحله ۲: جستجوی ترکیبی کد + نام...</div>`;
+      await new Promise(r => setTimeout(r, 0));
+
+      matches = searchCombined(allLinks, item.title, imdbID, item.type);
+      if (matches.length > 0) {
+        strategyLabel = `🔤+🆔 جستجوی ترکیبی: کد IMDb + نام <b>${item.title}</b>`;
+        renderExtractedLinks(matches, item, resultsDiv, strategyLabel);
+        return;
+      }
+
+      // ── STAGE 3: Title slug only with series-marker filter ─────────────────
+      resultsDiv.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:12px; background:#f0f9ff; border:1px solid rgba(14,165,233,0.2); border-radius:10px; font-size:13px; color:var(--cyan); font-weight:600;">🔍 مرحله ۳: جستجو با نام دقیق...</div>`;
+      await new Promise(r => setTimeout(r, 0));
+
+      matches = searchByTitleStrict(allLinks, item.title, item.type);
+      if (matches.length > 0) {
+        strategyLabel = `🔤 جستجوی نام دقیق: <b>${item.title}</b>`;
+        renderExtractedLinks(matches, item, resultsDiv, strategyLabel);
+        return;
+      }
+
+      // ── STAGE 4: AI fallback ───────────────────────────────────────────────
+      resultsDiv.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:12px; background:#f0f9ff; border:1px solid rgba(14,165,233,0.2); border-radius:10px; font-size:13px; color:var(--cyan); font-weight:600;">🤖 مرحله ۴: مشورت با هوش مصنوعی...</div>`;
+      await new Promise(r => setTimeout(r, 0));
+
+      const aiResult = await searchWithAI(item, allLinks);
+      if (aiResult === null) {
+        resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06); border:1px solid #f87171; padding:15px; border-radius:12px; font-size:13px; color:#b91c1c;">⚠️ لینکی پیدا نشد. کلید OpenRouter برای مرحله ۴ (جستجوی AI) تنظیم نشده است.</div>`;
+        return;
+      }
+      if (aiResult.length === 0) {
+        resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06); border:1px solid #f87171; padding:15px; border-radius:12px; font-size:13px; color:#b91c1c;">⚠️ هیچ لینکی برای این عنوان در آرشیو یافت نشد. (هر ۴ مرحله جستجو امتحان شد)</div>`;
+        return;
+      }
+      renderExtractedLinks(aiResult, item, resultsDiv, `🤖 یافت‌شده توسط هوش مصنوعی`);
+    }
+
+    function renderExtractedLinks(matches, currentItem, resultsDiv, strategyLabel) {
       const isSeries = currentItem ? currentItem.type === 'series' : false;
 
       function cleanQualityStr(text) {
@@ -442,7 +645,7 @@
         else if (text.includes("hdtv")) q += "HDTV";
         if (text.includes("x265")) q += " x265";
         if (text.includes("10bit")) q += " 10bit";
-        return q.trim() || "Quality Detected";
+        return q.trim() || "دانلود";
       }
 
       function extractFileSize(text) {
@@ -457,8 +660,12 @@
         if (lowerText.includes("dubbed") || lowerText.includes("دوبله") || lowerText.includes("dub")) dubbedLinks.push(m);
         else softSubLinks.push(m);
       });
-      
-      let finalMarkup = `<div class="quality-section-wrapper">`;
+
+      let finalMarkup = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <span style="font-size:12px; color:var(--text-muted); background:#f1f5f9; padding:4px 10px; border-radius:8px; border:1px solid var(--border);">${strategyLabel} — ${matches.length} لینک</span>
+        </div>
+        <div class="quality-section-wrapper">`;
 
       if (!isSeries) {
         if (softSubLinks.length > 0) {
@@ -480,6 +687,11 @@
             finalMarkup += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${lineDisplay}</a>`;
           });
           finalMarkup += `</div>`;
+        }
+        if (softSubLinks.length === 0 && dubbedLinks.length === 0) {
+          matches.forEach(m => {
+            finalMarkup += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${m.text || m.url}</a>`;
+          });
         }
       } else {
         function processSeriesGroup(linkArray, label, blockClass) {
@@ -504,11 +716,15 @@
         }
         finalMarkup += processSeriesGroup(softSubLinks, "SoftSub", "softsub");
         finalMarkup += processSeriesGroup(dubbedLinks, "Dubbed", "dubbed");
+        if (softSubLinks.length === 0 && dubbedLinks.length === 0) {
+          matches.forEach(m => {
+            finalMarkup += `<a href="${m.url}" target="_blank" class="movie-quality-line">📥 ${m.text || m.url}</a>`;
+          });
+        }
       }
       finalMarkup += `</div>`;
       resultsDiv.innerHTML = finalMarkup;
     }
-
     /* ===================== SPEECH RECOGNITION SYSTEM ===================== */
     function initSpeechRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -539,9 +755,9 @@
       const recBtn = document.getElementById("voiceRecBtn");
       if (!recBtn) return;
       if (isRec) {
-        recBtn.classList.add("recording"); recBtn.style.background = "#f59e0b"; recBtn.innerText = "🛑 در حال ضبط...";
+        recBtn.classList.add("recording"); recBtn.innerHTML = "🛑 در حال ضبط...";
       } else {
-        recBtn.classList.remove("recording"); recBtn.style.background = ""; recBtn.innerText = "🎙️ ثبت صوتی نقد";
+        recBtn.classList.remove("recording"); recBtn.innerHTML = "🎙️ ضبط صدا";
       }
     }
 
@@ -688,6 +904,7 @@
               <div class="extended-row"><strong>🎭 ستارگان:</strong> ${item.actors || 'نامشخص'}</div>
               <div class="extended-row"><strong>🌍 کشور / زبان:</strong> ${item.country || 'نامشخص'} / ${item.language || 'نامشخص'}</div>
               <div class="extended-row"><strong>🏆 جوایز:</strong> ${item.awards || 'بدون ثبت'}</div>
+              <div class="extended-row"><strong>🆔 IMDb ID:</strong> <span style="font-family:monospace; font-size:12px; background:#f1f5f9; padding:2px 7px; border-radius:6px; border:1px solid var(--border); color:var(--cyan); font-weight:700;">${item.id}</span></div>
             </div>
 
             <div class="hero-plot">${displayPlot}</div>
@@ -711,10 +928,16 @@
 
             <div class="audio-review-block">
               <div class="audio-controls">
-                <h4 style="font-size:13px; font-weight:700; color:var(--text-main);">🎙️ نقد و بررسی شخصی شما</h4>
-                <button id="voiceRecBtn" class="btn btn-secondary" style="padding:3px 10px; font-size:11.5px;" onclick="toggleVoiceInput()">🎙️ ضبط صوتی نقد</button>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:16px;">✍️</span>
+                  <div>
+                    <h4 style="font-size:13px; font-weight:800; color:var(--text-main); margin:0;">نقد و نظر شخصی</h4>
+                    <p style="font-size:11px; color:var(--text-muted); margin:0;">دیدگاه خود را بنویسید یا ضبط کنید</p>
+                  </div>
+                </div>
+                <button id="voiceRecBtn" class="voice-rec-btn" onclick="toggleVoiceInput()">🎙️ ضبط صدا</button>
               </div>
-              <textarea id="audioReviewTextarea" class="form-control" style="min-height:70px; font-size:13px; background:#fff;" placeholder="نقد خود را بنویسید یا دکمه ضبط صدا را بفشارید..." oninput="saveAudioReview('${item.id}', this.value)">${savedReview}</textarea>
+              <textarea id="audioReviewTextarea" class="review-textarea" placeholder="نقد، یادداشت یا احساستان درباره این اثر را بنویسید..." oninput="saveAudioReview('${item.id}', this.value)">${savedReview}</textarea>
             </div>
 
             <div class="hero-actions">
