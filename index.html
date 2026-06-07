@@ -27,8 +27,10 @@
       --radius-sm: 12px;
     }
 
+    /* FIX: removed "transition: all" from * — was a major perf bottleneck */
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Vazirmatn', sans-serif; }
 
+    /* Targeted transitions only on interactive elements */
     .btn, .btn-secondary, .btn-delete, .btn-stream, .btn-stream-next,
     .filter-btn, .movie-card, .search-item, .voice-rec-btn,
     .load-more-btn { transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
@@ -308,6 +310,7 @@
     }
     .load-more-btn:hover { background: rgba(255,255,255,0.08); }
 
+    /* ===================== TOAST ===================== */
     .toast {
       position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
       background: rgba(21,24,41,0.97); border: 1px solid var(--glass-border);
@@ -321,6 +324,7 @@
     .toast.toast-error   { border-color: rgba(239,68,68,0.5);  }
     .toast.toast-info    { border-color: rgba(96,165,250,0.5);  }
 
+    /* ===================== AI FLOATING CHAT ===================== */
     .ai-float-btn {
       position: fixed; bottom: 28px; right: 28px;
       width: 58px; height: 58px; border-radius: 50%;
@@ -609,16 +613,13 @@
           <div id="archiveUploadStatus" style="font-size:12px; color:#fbbf24; margin-top:10px;"></div>
         </div>
       </div>
-      <!-- NEW: Online archive URL section -->
+      <!-- NEW: Backup archive link section -->
       <div style="border-top: 1px solid var(--glass-border); margin: 24px 0 16px; padding-top: 18px;">
-        <p style="font-size: 14px; color: var(--cyan); margin-bottom: 14px; font-weight:bold;">🌐 آرشیو آنلاین (لینک)</p>
+        <p style="font-size: 14px; color: var(--cyan); margin-bottom: 14px; font-weight:bold;">🔗 آرشیو پشتیبان (لینک)</p>
         <div class="form-group">
-          <label>آدرس صفحه آرشیو (URL):</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="url" id="onlineArchiveUrlInput" class="form-control" placeholder="https://example.com/archive.html" style="flex:1;">
-            <button class="btn btn-secondary" onclick="testOnlineArchive()" id="testOnlineBtn">Fetch & Test</button>
-          </div>
-          <div id="onlineArchiveStatus" style="font-size:12px; color:#fbbf24; margin-top:10px;"></div>
+          <label>لینک وب‌سایت پشتیبان (در صورت عدم یافت لینک در فایل آپلودی)</label>
+          <input type="url" id="backupArchiveUrlInput" class="form-control" placeholder="https://example.com/archive">
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:6px;">اگر لینکی در فایل HTML یافت نشد، دکمه "باز کردن آرشیو پشتیبان" نمایش داده می‌شود.</div>
         </div>
       </div>
       <button class="btn" style="width:100%; margin-top:10px;" onclick="saveSettings()">ذخیره تنظیمات</button>
@@ -722,8 +723,6 @@
       omdbCache:     JSON.parse(localStorage.getItem("cinetrack_omdb_cache") || "{}"),
       globalAiCache: localStorage.getItem("cinetrack_global_ai_cache") || "",
       archiveHtmlSource: "",
-      onlineArchiveUrl: localStorage.getItem("cinetrack_online_archive_url") || "",
-      onlineArchiveContent: null,   // NEW: cached fetched online archive HTML
       audioReviews:  JSON.parse(localStorage.getItem("cinetrack_audio_reviews") || "{}"),
       uiLanguage:    localStorage.getItem("cinetrack_ui_lang") || "en"
     };
@@ -737,7 +736,7 @@
     let isLoadingMore           = false;
     let searchAbortController   = null;
     const searchQueryCache      = {};
-    const SEARCH_CACHE_TTL      = 5 * 60 * 1000;
+    const SEARCH_CACHE_TTL      = 5 * 60 * 1000; // 5 min
 
     // ==================== UTILS ====================
     function sanitizeAIResponse(text) {
@@ -1260,107 +1259,15 @@
       reader.readAsText(file, 'UTF-8');
     }
 
-    // ==================== NEW: ONLINE ARCHIVE ====================
-    function getLinksFromHtml(htmlString) {
+    // ==================== ARCHIVE LINK SEARCH ====================
+    function getAllArchiveLinks() {
+      if (!state.archiveHtmlSource) return [];
       const parser = new DOMParser();
-      const doc    = parser.parseFromString(htmlString, 'text/html');
+      const doc    = parser.parseFromString(state.archiveHtmlSource, 'text/html');
       return Array.from(doc.getElementsByTagName('a')).map(link => ({
         text: (link.innerText || link.textContent || '').trim(),
         url:  link.getAttribute('href') || ''
       })).filter(l => l.url && l.url.length > 5);
-    }
-
-// List of CORS proxies (fallback order)
-const CORS_PROXIES = [
-  'https://api.allorigins.win/raw?url=',          // often fast
-  'https://corsproxy.io/?',                       // sometimes down
-  'https://cors-anywhere.herokuapp.com/',          // needs activation, but try
-  'https://api.codetabs.com/v1/proxy?quest='      // simple & reliable
-];
-
-async function fetchOnlineArchive(url) {
-  // If already cached, return it
-  if (state.onlineArchiveUrl === url && state.onlineArchiveContent) {
-    return state.onlineArchiveContent;
-  }
-
-  // Helper to perform a single fetch attempt
-  async function tryFetch(fetchUrl, timeout = 15000) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-    try {
-      const res = await fetch(fetchUrl, { signal: controller.signal });
-      clearTimeout(timer);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
-      if (!html || html.trim().length === 0) throw new Error("Empty response");
-      return html;
-    } catch (err) {
-      clearTimeout(timer);
-      throw err;
-    }
-  }
-
-  // 1. Direct attempt first (fastest if server allows CORS)
-  try {
-    const html = await tryFetch(url, 10000);
-    state.onlineArchiveContent = html;
-    state.onlineArchiveUrl = url;
-    return html;
-  } catch (directErr) {
-    console.warn("Direct fetch failed, trying CORS proxies...", directErr);
-  }
-
-  // 2. Try each proxy in order
-  let lastError = null;
-  for (const proxyBase of CORS_PROXIES) {
-    try {
-      const proxiedUrl = proxyBase + encodeURIComponent(url);
-      console.log(`Trying proxy: ${proxyBase}`);
-      const html = await tryFetch(proxiedUrl);
-      // Success – cache and return
-      state.onlineArchiveContent = html;
-      state.onlineArchiveUrl = url;
-      return html;
-    } catch (proxyErr) {
-      console.warn(`Proxy ${proxyBase} failed:`, proxyErr.message);
-      lastError = proxyErr;
-      // Continue to next proxy
-    }
-  }
-
-  // If we get here, all proxies failed
-  throw new Error(`All proxies failed. Last error: ${lastError?.message || 'unknown'}`);
-}
-
-async function testOnlineArchive() {
-  const urlInput = document.getElementById("onlineArchiveUrlInput");
-  const statusEl = document.getElementById("onlineArchiveStatus");
-  const url = urlInput?.value.trim();
-  if (!url) {
-    statusEl.style.color = '#ef4444';
-    statusEl.textContent = "❌ لطفاً یک URL وارد کنید.";
-    return;
-  }
-  statusEl.style.color = '#fbbf24';
-  statusEl.textContent = "⏳ در حال fetch (مستقیم)...";
-  try {
-    const html = await fetchOnlineArchive(url);
-    const links = getLinksFromHtml(html);
-    statusEl.style.color = '#10b981';
-    statusEl.textContent = `✅ دریافت شد: ${Math.round(html.length / 1024)} KB, ${links.length} لینک`;
-    showToast("✅ آرشیو آنلاین با موفقیت fetch شد.", 'success');
-  } catch (err) {
-    statusEl.style.color = '#ef4444';
-    statusEl.textContent = `❌ خطا: ${err.message}`;
-    showToast(`❌ خطا در fetch: ${err.message}`, 'error');
-  }
-}
-
-    // ==================== ARCHIVE LINK SEARCH ====================
-    function getAllArchiveLinks() {
-      if (!state.archiveHtmlSource) return [];
-      return getLinksFromHtml(state.archiveHtmlSource);
     }
 
     function buildTitleRegex(title) {
@@ -1404,15 +1311,7 @@ async function testOnlineArchive() {
       return null;
     }
 
-    // NEW: try searching in a given link list using all stages (except AI fallback)
-    function searchInLinks(item, links) {
-      let matches = searchByImdbId(links, item.id);
-      if (matches.length) return matches;
-      matches = searchByBothStrict(links, item.title, item.id);
-      if (matches.length) return matches;
-      return searchByTitleOnly(links, item.title);
-    }
-
+    // MODIFIED: added fallback to backup archive link when no matches found
     async function matchAndExtractLinks(imdbID) {
       const item       = state.items.find(i => i.id === imdbID);
       const resultsDiv = document.getElementById("archiveMatchResults");
@@ -1422,71 +1321,56 @@ async function testOnlineArchive() {
         resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06);border:1px solid #f87171;padding:15px;border-radius:12px;font-size:14px;color:#ef4444;">⚠️ عنوان مورد نظر در کتابخانه یافت نشد.</div>`;
         return;
       }
-
-      function stageMsg(n, msg, isOnline = false) {
-        const totalStages = 5;
-        const stageLabel = isOnline ? `مرحله ${n} از ${totalStages}` : `مرحله ${n} از ۴`;
-        resultsDiv.innerHTML = `<div class="stage-indicator"><div class="stage-spinner"></div><span>${stageLabel} — ${msg}</span></div>`;
+      if (!state.archiveHtmlSource) {
+        resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06);border:1px solid #f87171;padding:15px;border-radius:12px;font-size:14px;color:#ef4444;">⚠️ فایل آرشیو بارگذاری نشده است. در تنظیمات فایل HTML آرشیو را آپلود کنید.</div>`;
+        return;
       }
 
-      let matches = [];
-
-      // ---- FILE-BASED SEARCH (stages 1–4) ----
-      if (state.archiveHtmlSource) {
-        const allLinks = getAllArchiveLinks();
-
-        stageMsg(1, `جستجو با کد IMDb: ${imdbID}`);
-        await tick();
-        matches = searchByImdbId(allLinks, imdbID);
-        if (matches.length) return renderExtractedLinks(matches, item, resultsDiv, `🆔 یافت‌شده با کد IMDb: <b>${imdbID}</b>`);
-
-        stageMsg(2, 'جستجوی ترکیبی — تطابق هم‌زمان کد و نام');
-        await tick();
-        matches = searchByBothStrict(allLinks, item.title, imdbID);
-        if (matches.length) return renderExtractedLinks(matches, item, resultsDiv, `🔤+🆔 یافت‌شده با تطابق ترکیبی`);
-
-        stageMsg(3, `جستجو با نام دقیق: ${item.title}`);
-        await tick();
-        matches = searchByTitleOnly(allLinks, item.title);
-        if (matches.length) return renderExtractedLinks(matches, item, resultsDiv, `🔤 یافت‌شده با نام: <b>${item.title}</b>`);
-
-        stageMsg(4, 'هیچ نتیجه‌ای یافت نشد — مشورت با هوش مصنوعی...');
-        await tick();
-        const aiResult = await searchWithAI(item, allLinks);
-        if (aiResult === null) {
-          // AI unavailable – fall through to online archive
-        } else if (aiResult.length) {
-          return renderExtractedLinks(aiResult, item, resultsDiv, `🤖 یافت‌شده توسط هوش مصنوعی`);
-        }
+      function stageMsg(n, msg) {
+        resultsDiv.innerHTML = `<div class="stage-indicator"><div class="stage-spinner"></div><span>مرحله ${n} از ۴ — ${msg}</span></div>`;
       }
 
-      // ---- ONLINE ARCHIVE FALLBACK (stage 5) ----
-      if (state.onlineArchiveUrl) {
-        let onlineHtml = null;
-        try {
-          onlineHtml = await fetchOnlineArchive(state.onlineArchiveUrl);
-        } catch (e) {
-          resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06);border:1px solid #f87171;padding:15px;border-radius:12px;font-size:14px;color:#ef4444;">⚠️ ارتباط با آرشیو آنلاین ممکن نیست: ${e.message}</div>`;
-          return;
-        }
+      const allLinks = getAllArchiveLinks();
+      let matches    = [];
 
-        const onlineLinks = getLinksFromHtml(onlineHtml);
-        stageMsg(5, 'در حال جستجو در آرشیو آنلاین...', true);
-        await tick();
+      stageMsg('۱', `جستجو با کد IMDb: ${imdbID}`);
+      await tick();
+      matches = searchByImdbId(allLinks, imdbID);
+      if (matches.length) return renderExtractedLinks(matches, item, resultsDiv, `🆔 یافت‌شده با کد IMDb: <b>${imdbID}</b>`);
 
-        matches = searchInLinks(item, onlineLinks);
-        if (matches.length) return renderExtractedLinks(matches, item, resultsDiv, `🌐 یافت‌شده در آرشیو آنلاین`);
+      stageMsg('۲', 'جستجوی ترکیبی — تطابق هم‌زمان کد و نام');
+      await tick();
+      matches = searchByBothStrict(allLinks, item.title, imdbID);
+      if (matches.length) return renderExtractedLinks(matches, item, resultsDiv, `🔤+🆔 یافت‌شده با تطابق ترکیبی`);
 
-        // AI fallback for online
-        stageMsg(5, 'مشورت با هوش مصنوعی روی آرشیو آنلاین...', true);
-        const aiOnline = await searchWithAI(item, onlineLinks);
-        if (aiOnline && aiOnline.length) {
-          return renderExtractedLinks(aiOnline, item, resultsDiv, `🤖+🌐 یافت‌شده توسط هوش مصنوعی (آنلاین)`);
-        }
+      stageMsg('۳', `جستجو با نام دقیق: ${item.title}`);
+      await tick();
+      matches = searchByTitleOnly(allLinks, item.title);
+      if (matches.length) return renderExtractedLinks(matches, item, resultsDiv, `🔤 یافت‌شده با نام: <b>${item.title}</b>`);
+
+      stageMsg('۴', 'هیچ نتیجه‌ای یافت نشد — مشورت با هوش مصنوعی...');
+      await tick();
+      const aiResult = await searchWithAI(item, allLinks);
+      if (aiResult === null) {
+        resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06);border:1px solid #f87171;padding:15px;border-radius:12px;font-size:14px;color:#ef4444;">⚠️ ارتباط با هوش مصنوعی ممکن نیست.</div>`;
+        return;
       }
-
-      // If we reach here, nothing found anywhere
-      resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06);border:1px solid #f87171;padding:15px;border-radius:12px;font-size:14px;color:#ef4444;">⚠️ هیچ لینکی برای <b>${item.title}</b> در فایل آرشیو و آرشیو آنلاین یافت نشد.</div>`;
+      if (!aiResult.length) {
+        // FALLBACK: No links found -> offer to open backup archive link if set
+        const backupUrl = localStorage.getItem("cinetrack_backup_archive_url");
+        if (backupUrl && backupUrl.trim().length > 5) {
+          resultsDiv.innerHTML = `
+            <div style="background:rgba(245,158,11,0.08);border:1px solid #f59e0b;padding:18px;border-radius:16px;text-align:center;">
+              <div style="font-size:16px;margin-bottom:12px;">⚠️ هیچ لینکی برای <b>${item.title}</b> در فایل آپلودی یافت نشد.</div>
+              <div style="margin-bottom:16px;color:var(--text-secondary);">آیا می‌خواهید آرشیو پشتیبان را باز کنید؟</div>
+              <button class="btn btn-stream" onclick="window.open('${backupUrl.replace(/'/g, "\\'")}', '_blank')">🔗 باز کردن آرشیو پشتیبان</button>
+            </div>`;
+        } else {
+          resultsDiv.innerHTML = `<div style="background:rgba(239,68,68,0.06);border:1px solid #f87171;padding:15px;border-radius:12px;font-size:14px;color:#ef4444;">⚠️ هیچ لینکی برای <b>${item.title}</b> یافت نشد. (لینک پشتیبان در تنظیمات ثبت نشده)</div>`;
+        }
+        return;
+      }
+      renderExtractedLinks(aiResult, item, resultsDiv, `🤖 یافت‌شده توسط هوش مصنوعی`);
     }
 
     function tick() { return new Promise(r => setTimeout(r, 0)); }
@@ -1864,20 +1748,22 @@ async function testOnlineArchive() {
 
     function openNotesModal()    { document.getElementById("notesModal").classList.add("active"); }
     function saveGeneralNotes(v) { localStorage.setItem("cinetrack_general_notes", v); }
-    function openSettingsModal() { document.getElementById("settingsModal").classList.add("active"); }
+    function openSettingsModal() {
+      document.getElementById("settingsModal").classList.add("active");
+      // Load existing backup archive URL into input
+      const savedUrl = localStorage.getItem("cinetrack_backup_archive_url") || "";
+      const urlInput = document.getElementById("backupArchiveUrlInput");
+      if (urlInput) urlInput.value = savedUrl;
+    }
 
     function saveSettings() {
       const lang     = document.getElementById("uiLanguageSetting").value;
       state.uiLanguage = lang;
       localStorage.setItem("cinetrack_ui_lang", lang);
-
-      // Save online archive URL
-      const urlInput = document.getElementById("onlineArchiveUrlInput");
-      if (urlInput) {
-        state.onlineArchiveUrl = urlInput.value.trim();
-        localStorage.setItem("cinetrack_online_archive_url", state.onlineArchiveUrl);
-      }
-
+      // Save backup archive URL
+      const backupUrl = document.getElementById("backupArchiveUrlInput").value.trim();
+      if (backupUrl) localStorage.setItem("cinetrack_backup_archive_url", backupUrl);
+      else localStorage.removeItem("cinetrack_backup_archive_url");
       showToast("✅ تنظیمات ذخیره شد.", 'success');
       closeModal('settingsModal');
       renderHero();
@@ -1887,6 +1773,7 @@ async function testOnlineArchive() {
       document.getElementById(id)?.classList.remove("active");
     }
 
+    // Close modals on backdrop click
     document.addEventListener('click', function(e) {
       if (e.target.classList.contains('modal-backdrop')) {
         e.target.classList.remove('active');
@@ -2252,16 +2139,6 @@ ${JSON.stringify(lib, null, 1)}
 
       const langSelect = document.getElementById("uiLanguageSetting");
       if (langSelect) langSelect.value = state.uiLanguage;
-
-      // Restore online archive URL input
-      const urlInput = document.getElementById("onlineArchiveUrlInput");
-      if (urlInput) {
-        urlInput.value = state.onlineArchiveUrl;
-        // If a URL exists, try to fetch it silently to warm the cache
-        if (state.onlineArchiveUrl) {
-          fetchOnlineArchive(state.onlineArchiveUrl).catch(() => {});
-        }
-      }
 
       if (state.archiveHtmlSource) {
         const statusEl = document.getElementById("archiveUploadStatus");
