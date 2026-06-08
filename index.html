@@ -667,10 +667,9 @@
   <script>
     // ==================== API CONFIGURATION ====================
     const OMDB_KEY    = "4b0254f3";
-    const AI_API_BASE = "https://api.groq.com/openai/v1"; 
-    const AI_API_KEY  = "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
-";
-    let AI_MODEL      = localStorage.getItem("cinetrack_ai_model") || "laguna-m.1:free";
+    const AI_API_BASE = "https://openrouter.ai/api/v1";
+    const AI_API_KEY  = "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";
+    let AI_MODEL      = localStorage.getItem("cinetrack_ai_model") || "meta-llama/llama-3.1-8b-instruct:free";
 
     // ==================== IndexedDB ====================
     const DB_NAME    = 'CineTrackDB';
@@ -787,7 +786,9 @@
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${key}`
+          "Authorization": `Bearer ${key}`,
+          "HTTP-Referer": location.href,
+          "X-Title": "CineTrack AI Ultimate"
         },
         body: JSON.stringify({ model: AI_MODEL, messages, temperature, max_tokens: 1500 })
       });
@@ -1736,7 +1737,7 @@
     function openSettingsModal() {
       document.getElementById("settingsModal").classList.add("active");
       
-      const savedModel = localStorage.getItem("cinetrack_ai_model") || "llama-3.3-70b-versatile";
+      const savedModel = localStorage.getItem("cinetrack_ai_model") || "meta-llama/llama-3.1-8b-instruct:free";
       const modelInput = document.getElementById("aiModelInput");
       if (modelInput) modelInput.value = savedModel;
 
@@ -1748,7 +1749,7 @@
     function saveSettings() {
       const modelInput = document.getElementById("aiModelInput");
       if (modelInput) {
-        const newModel = modelInput.value.trim() || "llama-3.3-70b-versatile";
+        const newModel = modelInput.value.trim() || "meta-llama/llama-3.1-8b-instruct:free";
         AI_MODEL = newModel;
         localStorage.setItem("cinetrack_ai_model", newModel);
       }
